@@ -3,9 +3,9 @@ clc
 clearvars
 
 mu = 0;
-v  = 1;
-dx = 0.001;
-x  = -5:dx:5;
+v  = 2;
+dx = 0.0005;
+x  = -7:dx:7;
 
 % Get CDF
 fx = (1 / (sqrt(2*pi) * v)) * exp(-0.5 * ((x - mu) / v).^2);

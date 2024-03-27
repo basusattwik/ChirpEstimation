@@ -28,9 +28,10 @@ y   = addWhiteGaussianNoise(x, snr);
 
 % 1. Make the 2D Joint PDF g
 % Create a 2D rectangular grid of M x M points alpha and beta
-M   = 10;
+M   = 100;
 dx  = 1/M;
 rho = 0.4;
+lam = 0.1;
 P   = 2;
 jointPdf = genPseudoPdf(x, phi, rho, M, Fs);
 
@@ -41,21 +42,68 @@ marAlphaPdf = mean(jointPdf, 2);
 marAlphaCdf = cumtrapz(marAlphaPdf) * dx; % OR cumsum?
 
 % 4. Obtain Conditional PDF of beta when given alpha
-conBetaPdf = zeros(size(jointPdf));
+conBetaGivAlphaPdf = zeros(size(jointPdf));
 for i = 1:M
     for j = 1:M
-        conBetaPdf(i,j) = jointPdf(i,j) / marAlphaPdf(i);
+        conBetaGivAlphaPdf(i,j) = jointPdf(i,j) / marAlphaPdf(i);
     end
 end
 
 % 5. Obtain Conditional CDF of beta when given alpha
-conBetaCdf = cumtrapz(conBetaPdf); % OR cumsum?
+conBetaGivAlphaCdf = cumtrapz(conBetaGivAlphaPdf); % OR cumsum?
+for i = 1:M
+    conBetaGivAlphaCdf(i,:) = cumtrapz(conBetaGivAlphaPdf(i,:)) * dx;
+end
 
 % 6. Inverse CDF transform
-u1 = unifrnd(0, 1, [P,1]);
-u2 = unifrnd(0, 1, [P,1]);
+R = 3000;
 
-invMarAlphaCdf = interp1(marAlphaCdf, linspace(0,1,M) , u1, 'spline','extrap');
-% invConAlphaCdf = interp1(conBetaCdf,  linspace(0,1,M) , u2, 'spline','extrap');
+alphaGrid = linspace(0,1,M);
+betaGrid  = linspace(0,1,M);
+
+alphaIs = zeros(P,R);
+betaIs  = zeros(P,R);
+for r = 1:R
+
+    % Sample uniform distribution
+    u1 = rand(2,1);
+    u2 = rand(2,1);
+
+    % Get a sample of alpha
+    temp = interp1(marAlphaCdf, alphaGrid, u1, 'spline');
+    if temp < 0
+        temp = 0;
+    elseif temp > 1
+        temp = 1;
+    end
+    alphaIs(:,r) = temp;
+
+    % Get a sample of beta
+    for p = 1:P
+        alphaInd = find(alphaGrid <= alphaIs(p,r), 1, "last");
+        [uConBetaGivAlphaCdf, uidx] = unique(conBetaGivAlphaCdf(alphaInd, :));
+        uBetaGrid   = betaGrid(uidx);
+
+        temp = interp1(uConBetaGivAlphaCdf,  uBetaGrid, u2(p,1), 'spline');
+        if temp < 0
+            temp = 0;
+        elseif temp > 1
+            temp = 1;
+        end
+        betaIs(p,r) = temp;
+    end
+end
+
+% Calculate circular means
+N = length(x) / Fs;
+L = zeros(R, 1);
+I = zeros(R, 1);
+for r = 1:R
+    L(r,1) = genLiklihoodFunc(N, Fs, P, alphaIs(:,r), beta(:,r), lam);
+    c = genExpPolyChirp2(Fs, N, 1, -[alphaIs(:,r), beta(:,r)]);
+    I(r,1) = exp(rho * (1/N) * abs(x.' * c)^2);
+end
+
+
 
 
