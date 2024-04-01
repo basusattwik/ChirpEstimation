@@ -10,7 +10,7 @@ rng(seed);
 
 % Setup Chirp parameters
 Fs = 50;
-Td = 0.5; % sec
+Td = 1; % sec
 
 f0  = 5; 
 f1  = 20;
@@ -37,7 +37,13 @@ dx  = 1/M;
 rho = 0.8;
 lam = 4;
 P   = numel(amp);
-jointPdf = genPseudoPdf(y, nPhi, rho, M);
+
+alphaGrid = linspace(0,1,M);
+betaGrid  = linspace(0,2,M);
+
+jointPdf     = genPseudoPdf(y, nPhi, rho, M);
+areaJointPdf =  trapz(alphaGrid, trapz(betaGrid, jointPdf, 2));
+disp(['total area of Joint PDF = ', num2str(areaJointPdf)]);
 
 % % load joint pdf
 % filePath = '/Users/sattwikbasu/Documents/MATLAB/ProjectData/ChirpParameterEstimation/';
@@ -45,11 +51,11 @@ jointPdf = genPseudoPdf(y, nPhi, rho, M);
 % dataStruct = load([filePath, fileName]);
 % jointPdf   = real((dataStruct.jointPdf).^rho);
 
-% 2. Obtain the Marginal PDF of alpha
-marAlphaPdf = mean(jointPdf, 2);
+%% 2. Obtain the Marginal PDF of alpha
+marAlphaPdf = sum(jointPdf .* (betaGrid(2) - betaGrid(1)), 2);
 
 % 3. Obtain the Marginal CDF of alpha
-marAlphaCdf = cumtrapz(marAlphaPdf) * dx; % OR cumsum?
+marAlphaCdf = cumsum(marAlphaPdf) * (alphaGrid(2) - alphaGrid(1)); % OR cumsum?
 
 % 4. Obtain Conditional PDF of beta when given alpha
 conBetaGivAlphaPdf = zeros(size(jointPdf));
@@ -67,9 +73,6 @@ end
 
 %% 6. Inverse CDF transform
 R = 4000;
-
-alphaGrid = linspace(0,1,M);
-betaGrid  = linspace(0,2,M);
 
 alphaIs = zeros(P,R);
 betaIs  = zeros(P,R);
