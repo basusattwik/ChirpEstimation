@@ -1,4 +1,4 @@
-function Lc = genLiklihoodFunc(x, P, alpha, beta, lambda)
+function Lc = genLiklihoodFunc(x, P, alpha, beta, rho)
 %GENLIKLIHOODFUNC Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -11,6 +11,6 @@ for p = 1:P
 end
 
 % Likelihood Function
-Lc = lambda * x' * (H * pinv(H' * H) * H') * x;
+Lc = real(rho * x' * (H * pinv(H' * H) * H') * x);
 
 end

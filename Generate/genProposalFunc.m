@@ -1,4 +1,4 @@
-function g = genProposalFunc(x, P, alpha, beta, rho)
+function g = genProposalFunc(x, P, alpha, beta, rho1)
 %GENPROPOSALFUNC Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -11,6 +11,6 @@ for p = 1:P
 end
 
 % Likelihood Function
-g = rho * (1/N) * x' * (H * eye(P) * H') * x;
+g = real(rho1 * (1/N) * x' * (H * H') * x);
 
 end
