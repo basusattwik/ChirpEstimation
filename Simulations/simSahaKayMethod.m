@@ -137,17 +137,40 @@ close all
 % Reconstruct signal
 yHat = genExpPolyChirp3(Fs, Td, amp, phiHat);
 
+x1 = genExpPolyChirp3(Fs, Td, amp(1), phi(1,:));
+x2 = genExpPolyChirp3(Fs, Td, amp(2), phi(2,:));
+
+x1Hat = genExpPolyChirp3(Fs, Td, amp(1), phiHat(1,:));
+x2Hat = genExpPolyChirp3(Fs, Td, amp(2), phiHat(2,:));
+
 % Time
 tx = 0:1/Fs:Td-1/Fs;
 figure(1)
-plot(tx, imag(y)); hold on;
-plot(tx, imag(yHat));
-grid on; grid minor;
-xlabel('Time (s)');
-ylabel('Amp.');
-legend('Original', 'Recon.');
-title('Original vs Reconstructed superimposed chirps');
-
+subplot(3,1,1)
+    plot(tx, imag(y)); hold on;
+    plot(tx, imag(yHat));
+    grid on; grid minor;
+    xlabel('Time (s)');
+    ylabel('Amp.');
+    legend('Original', 'Recon.');
+    title('Superimposed');
+subplot(3,1,2)
+    plot(tx, imag(x1)); hold on;
+    plot(tx, imag(x1Hat));
+    grid on; grid minor;
+    xlabel('Time (s)');
+    ylabel('Amp.');
+    legend('Original', 'Recon.');
+    title('$x_1$', 'interpreter', 'latex');
+subplot(3,1,3)
+    plot(tx, imag(x2)); hold on;
+    plot(tx, imag(x2Hat));
+    grid on; grid minor;
+    xlabel('Time (s)');
+    ylabel('Amp.');
+    legend('Original', 'Recon.');
+    title('$x_2$', 'interpreter', 'latex');
+sgtitle('Original vs Reconstructed superimposed chirps');
 figure(2)
 subplot(2,1,1)
     plot(alphaGrid * Fs, marAlphaPdf);
