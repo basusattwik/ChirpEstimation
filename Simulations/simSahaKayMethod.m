@@ -8,13 +8,12 @@ rng(seed);
 
 %% Generate chirps
 
-tic;
 % Setup Chirp parameters
 Fs = 50;
 Td = 1; % sec
 
-f0_1 = 4; 
-f1_1 = 4;
+f0_1 = 6; 
+f1_1 = 6;
 k_1  = (f1_1 - f0_1) / Td;
 
 f0_2 = 17; 
@@ -31,7 +30,7 @@ nPhi = size(phi, 1);
 [x, t] = genExpPolyChirp3(Fs, Td, amp, phi);
 
 % Add White Gaussian Noise to x
-snr = 120;
+snr = 30;
 y   = addWhiteGaussianNoise(x, snr); 
 
 %% Maximum Likelikhood Estimation 
@@ -39,14 +38,16 @@ y   = addWhiteGaussianNoise(x, snr);
 % 1. Make the 2D Joint PDF g
 % Create a 2D rectangular grid of M x M points alpha and beta
 M    = 2000;
-rho  = 1;
+rho  = 4;
 rho1 = 0.4;
 P    = numel(amp);
 
 alphaGrid = linspace(0,1,M);
 betaGrid  = linspace(0,2,M);
 
-[jointPdf,~] = genPseudoPdf(y, nPhi, rho1, M);
+[jointPdf,~] = genPseudoPdf(y, rho1, M);
+
+% check that total area under pdf = 1
 areaJointPdf = trapz(alphaGrid, trapz(betaGrid, jointPdf, 2));
 disp(['total area of Joint PDF = ', num2str(areaJointPdf)]);
 
@@ -56,7 +57,7 @@ disp(['total area of Joint PDF = ', num2str(areaJointPdf)]);
 marAlphaPdf = trapz(betaGrid, jointPdf, 2);
 
 % 3. Obtain the Marginal CDF of alpha
-marAlphaCdf = cumtrapz(alphaGrid, marAlphaPdf);
+marAlphaCdf = cumtrapz(alphaGrid, marAlphaPdf) + 10e-5*rand(M,1); % adding random noise makes the CDF values "unique". Creates fewer issues during inv. CDF transformation.
 
 % 4. Obtain Conditional PDF of beta when given alpha
 conBetaGivAlphaPdf = zeros(size(jointPdf));
@@ -71,52 +72,40 @@ conBetaGivAlphaCdf = zeros(size(jointPdf));
 for i = 1:M
     conBetaGivAlphaCdf(i,:) = cumtrapz(betaGrid, conBetaGivAlphaPdf(i,:), 2);
 end
+conBetaGivAlphaCdf = conBetaGivAlphaCdf + 10e-5*rand(M,M);
 
 %% 6. Inverse CDF transform
 
 R = 10000;
 
-alphaIs = zeros(P,R);
-betaIs  = zeros(P,R);
-
-% Unique values from alpha's CDF
-[uMarAlphaCdf, uAlphaIdx] = unique(marAlphaCdf);
-uAlphaGrid = alphaGrid(uAlphaIdx);
+alphaSampled = zeros(P,R);
+betaSampled  = zeros(P,R);
 for r = 1:R
     for p = 1:P
-        while(1)
+        % while(true)
             % Sample uniform distribution
             u1 = rand(1);
         
             % Get one sample estimate of alpha
-            % temp = interp1(uMarAlphaCdf, uAlphaGrid, u1, 'linear');
-            temp = interp1(marAlphaCdf, alphaGrid, u1, 'linear');
-            % if temp < 0
-            %     temp = 0;
-            % elseif temp > 1
-            %     temp = 1;
-            % end
-            alphaIs(p,r) = temp;
+            tempAlphaSample   = interp1(marAlphaCdf, alphaGrid, u1, 'linear');
+            [~, alphaInd]     = min(abs(alphaGrid - tempAlphaSample));
+            alphaSampled(p,r) = alphaGrid(alphaInd);
     
-            % Get a sample of beta 
-            alphaInd = find(alphaGrid >= alphaIs(p,r), 1, "first");
+            % Choose alpha index to condition beta's inv. cdf generation on
+            % alphaInd = find(alphaGrid >= alphaSampled(p,r), 1, "first");
 
-            if ~isempty(alphaInd)
-                break
-            end
-        end
-
-        u2 = rand(1);
-        [uConBetaGivAlphaCdf, uBetaIdx] = unique(conBetaGivAlphaCdf(alphaInd, :));
-        uBetaGrid = betaGrid(uBetaIdx);
-
-        temp = interp1(uConBetaGivAlphaCdf, uBetaGrid, u2, 'linear');
-        % if temp < 0
-        %     temp = 0;
-        % elseif temp > 2
-        %     temp = 2;
+            % if ~isempty(alphaInd)
+            %     break % break the while loop
+            % end
         % end
-        betaIs(p,r) = temp;
+        
+        % Sample uniform distribution 
+        u2 = rand(1);
+
+        % Get one sample estimate of beta
+        tempBetaSample   = interp1(conBetaGivAlphaCdf(alphaInd, :), betaGrid, u2, 'linear'); 
+        [~, betaInd]     = min(abs(betaGrid - tempBetaSample));
+        betaSampled(p,r) = betaGrid(betaInd);
     end
 end
 
@@ -124,31 +113,34 @@ end
 L = zeros(R,1);
 g = zeros(R,1);
 for r = 1:R
-    L(r,1) = genLiklihoodFunc(y, P, alphaIs(:,r), betaIs(:,r), rho);
-    g(r,1) = genProposalFunc( y, P, alphaIs(:,r), betaIs(:,r), rho1);
+    L(r,1) = genLiklihoodFunc(y, P, alphaSampled(:,r), betaSampled(:,r), rho);
+    g(r,1) = genProposalFunc(y,  P, alphaSampled(:,r), betaSampled(:,r), rho1);
 end
 
 % Frequencies & Chirp rate Circular Means
-alphaEstArr = zeros(P,R);
-betaEstArr  = zeros(P,R);
+alphaEstArr = complex(zeros(P,R), zeros(P,R));
+betaEstArr  = complex(zeros(P,R), zeros(P,R));
+tempAlphaSample = complex(0,0);
 for p = 1:P   
     for r = 1:R
-        alphaEstArr(p,r) = exp(2*pi*1i * alphaIs(p,r)) * exp(L(r,1) - g(r,1));    
-        betaEstArr(p,r)  = exp(pi*1i   * betaIs(p,r))  * exp(L(r,1) - g(r,1));       
+
+        expLMinusG = exp(L(r,1) - g(r,1));
+
+        tempAlphaSample = exp(2*pi*1j * alphaSampled(p,r)) * expLMinusG;
+        alphaEstArr(p,r) = tempAlphaSample;% / abs(temp);    
+
+        tempAlphaSample = exp(pi*1j * betaSampled(p,r)) * expLMinusG;
+        betaEstArr(p,r)  = tempAlphaSample;% / abs(temp);       
     end
 end
 
 alphaEst = (1/(2*pi)) * angle(mean(alphaEstArr, 2));
-betaEst  = (2/(2*pi)) * angle(mean(betaEstArr, 2));
-
-toc;
+betaEst  = (2/(2*pi)) * angle(mean(betaEstArr,  2));
 
 phiHat = [alphaEst * Fs, betaEst * 4*Fs^2];
 
 %% Plots
 close all
-
-
 
 % Reconstruct signal
 yHat = genExpPolyChirp3(Fs, Td, amp, phiHat);

@@ -1,4 +1,4 @@
-function [normPseudoPdf, pseudoPdf] = genPseudoPdf(x, nPhi, rho, M)
+function [normPseudoPdf, pseudoPdf] = genPseudoPdf(x, rho, M)
 %GENPSEUDOPDF Summary of this function goes here
 %   Detailed explanation goes here
 
