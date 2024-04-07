@@ -3,8 +3,8 @@ function [normPseudoPdf, pseudoPdf] = genPseudoPdf(x, rho, M)
 %   Detailed explanation goes here
 
 P = 1; % one chirp at a time
-alphaGrid = linspace(0, 1, M);
-betaGrid  = linspace(0, 2, M);
+alphaGrid = linspace(0, 1/2, M);
+betaGrid  = linspace(0, 2/2, M);
 propFunc  = zeros(M, M); %zeros(M * ones(1,nPhi));
 for i = 1:M
     for j = 1:M

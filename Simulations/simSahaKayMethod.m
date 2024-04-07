@@ -13,37 +13,41 @@ Fs = 50;
 Td = 1; % sec
 
 f0_1 = 6; 
-f1_1 = 6;
+f1_1 = 16;
 k_1  = (f1_1 - f0_1) / Td;
 
 f0_2 = 17; 
-f1_2 = 17;
+f1_2 = 23;
 k_2  = (f1_2 - f0_2) / Td;
 
 phi = [f0_1, k_1; ...
        f0_2, k_2];
 amp = [1, 1];
 
+% phi  = [f0_1, k_1];
+% amp  = 1;
 nPhi = size(phi, 1);
 
-% Generate the chirp
+M    = 2000;
+rho  = 7;
+rho1 = 0.4;
+
+%% Generate the chirp
+
 [x, t] = genExpPolyChirp3(Fs, Td, amp, phi);
 
 % Add White Gaussian Noise to x
-snr = 30;
+snr = 80;
 y   = addWhiteGaussianNoise(x, snr); 
 
 %% Maximum Likelikhood Estimation 
 
 % 1. Make the 2D Joint PDF g
 % Create a 2D rectangular grid of M x M points alpha and beta
-M    = 2000;
-rho  = 4;
-rho1 = 0.4;
 P    = numel(amp);
 
-alphaGrid = linspace(0,1,M);
-betaGrid  = linspace(0,2,M);
+alphaGrid = linspace(0,1/2,M);
+betaGrid  = linspace(0,2/2,M);
 
 [jointPdf,~] = genPseudoPdf(y, rho1, M);
 
@@ -76,37 +80,31 @@ conBetaGivAlphaCdf = conBetaGivAlphaCdf + 10e-5*rand(M,M);
 
 %% 6. Inverse CDF transform
 
-R = 10000;
+R = 1000;
 
-alphaSampled = zeros(P,R);
-betaSampled  = zeros(P,R);
+alphaSampled  = zeros(P,R);
+betaSampled   = zeros(P,R);
+tempAlphaGrid = alphaGrid;
 for r = 1:R
+    % Sample uniform distribution
+    u1 = rand(P,1);
+    u2 = rand(P,1);
     for p = 1:P
-        % while(true)
-            % Sample uniform distribution
-            u1 = rand(1);
-        
-            % Get one sample estimate of alpha
-            tempAlphaSample   = interp1(marAlphaCdf, alphaGrid, u1, 'linear');
-            [~, alphaInd]     = min(abs(alphaGrid - tempAlphaSample));
-            alphaSampled(p,r) = alphaGrid(alphaInd);
     
-            % Choose alpha index to condition beta's inv. cdf generation on
-            % alphaInd = find(alphaGrid >= alphaSampled(p,r), 1, "first");
-
-            % if ~isempty(alphaInd)
-            %     break % break the while loop
-            % end
-        % end
-        
-        % Sample uniform distribution 
-        u2 = rand(1);
+        % Get one sample estimate of alpha
+        tempAlphaSample   = interp1(marAlphaCdf, alphaGrid, u1(p,1), 'linear');
+        [~, alphaInd]     = min(abs(tempAlphaGrid - tempAlphaSample));
+        alphaSampled(p,r) = alphaGrid(alphaInd);
 
         % Get one sample estimate of beta
-        tempBetaSample   = interp1(conBetaGivAlphaCdf(alphaInd, :), betaGrid, u2, 'linear'); 
+        tempBetaSample   = interp1(conBetaGivAlphaCdf(alphaInd, :), betaGrid, u2(p,1), 'linear'); 
         [~, betaInd]     = min(abs(betaGrid - tempBetaSample));
         betaSampled(p,r) = betaGrid(betaInd);
+
+        % Save previous alphaInd
+        tempAlphaGrid(alphaInd) = [];
     end
+    tempAlphaGrid = alphaGrid;
 end
 
 % Calculate circular means
@@ -120,24 +118,18 @@ end
 % Frequencies & Chirp rate Circular Means
 alphaEstArr = complex(zeros(P,R), zeros(P,R));
 betaEstArr  = complex(zeros(P,R), zeros(P,R));
-tempAlphaSample = complex(0,0);
 for p = 1:P   
     for r = 1:R
-
-        expLMinusG = exp(L(r,1) - g(r,1));
-
-        tempAlphaSample = exp(2*pi*1j * alphaSampled(p,r)) * expLMinusG;
-        alphaEstArr(p,r) = tempAlphaSample;% / abs(temp);    
-
-        tempAlphaSample = exp(pi*1j * betaSampled(p,r)) * expLMinusG;
-        betaEstArr(p,r)  = tempAlphaSample;% / abs(temp);       
+        expLMinusG       = exp(L(r,1) - g(r,1));
+        alphaEstArr(p,r) = exp(2*pi*1j * alphaSampled(p,r)) * expLMinusG;
+        betaEstArr(p,r)  = exp(pi*1j   * betaSampled(p,r))  * expLMinusG;     
     end
 end
 
 alphaEst = (1/(2*pi)) * angle(mean(alphaEstArr, 2));
 betaEst  = (2/(2*pi)) * angle(mean(betaEstArr,  2));
 
-phiHat = [alphaEst * Fs, betaEst * 4*Fs^2];
+phiHat = [alphaEst * Fs, betaEst * Fs^2];
 
 %% Plots
 close all
