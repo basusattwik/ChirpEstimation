@@ -12,11 +12,11 @@ rng(seed);
 Fs = 50;
 Td = 1; % sec
 
-f0_1 = 6; 
-f1_1 = 16;
+f0_1 = 5; 
+f1_1 = 15;
 k_1  = (f1_1 - f0_1) / Td;
 
-f0_2 = 17; 
+f0_2 = 7; 
 f1_2 = 23;
 k_2  = (f1_2 - f0_2) / Td;
 
@@ -44,7 +44,7 @@ y   = addWhiteGaussianNoise(x, snr);
 
 % 1. Make the 2D Joint PDF g
 % Create a 2D rectangular grid of M x M points alpha and beta
-P    = numel(amp);
+P = numel(amp);
 
 alphaGrid = linspace(0,1/2,M);
 betaGrid  = linspace(0,2/2,M);
@@ -61,7 +61,7 @@ disp(['total area of Joint PDF = ', num2str(areaJointPdf)]);
 marAlphaPdf = trapz(betaGrid, jointPdf, 2);
 
 % 3. Obtain the Marginal CDF of alpha
-marAlphaCdf = cumtrapz(alphaGrid, marAlphaPdf) + 10e-5*rand(M,1); % adding random noise makes the CDF values "unique". Creates fewer issues during inv. CDF transformation.
+marAlphaCdf = cumtrapz(alphaGrid, marAlphaPdf) + 10e-6*rand(M,1); % adding random noise makes the CDF values "unique". Creates fewer issues during inv. CDF transformation.
 
 % 4. Obtain Conditional PDF of beta when given alpha
 conBetaGivAlphaPdf = zeros(size(jointPdf));
@@ -76,7 +76,7 @@ conBetaGivAlphaCdf = zeros(size(jointPdf));
 for i = 1:M
     conBetaGivAlphaCdf(i,:) = cumtrapz(betaGrid, conBetaGivAlphaPdf(i,:), 2);
 end
-conBetaGivAlphaCdf = conBetaGivAlphaCdf + 10e-5*rand(M,M);
+conBetaGivAlphaCdf = conBetaGivAlphaCdf + 10e-6*rand(M,M);
 
 %% 6. Inverse CDF transform
 
@@ -153,7 +153,7 @@ subplot(3,1,1)
     xlabel('Time (s)');
     ylabel('Amp.');
     legend('Original', 'Recon.');
-    title('Superimposed');
+    title('$x_1 + x_2$', 'interpreter', 'latex');
 subplot(3,1,2)
     plot(tx, imag(x1)); hold on;
     plot(tx, imag(x1Hat));
@@ -171,6 +171,7 @@ subplot(3,1,3)
     legend('Original', 'Recon.');
     title('$x_2$', 'interpreter', 'latex');
 sgtitle('Original vs Reconstructed superimposed chirps');
+
 figure(2)
 subplot(2,1,1)
     plot(alphaGrid * Fs, marAlphaPdf);
