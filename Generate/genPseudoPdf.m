@@ -9,8 +9,6 @@ propFunc  = zeros(M, M); %zeros(M * ones(1,nPhi));
 for i = 1:M
     for j = 1:M
         propFunc(i,j) = genProposalFunc(x, P, alphaGrid(i), betaGrid(j), rho);
-        % ch = genExpPolyChirp3(1, N, 1, -[paramGrid(1,i), paramGrid(1,j)]);
-        % propFunc(i,j) = (1/N) * abs(x' * ch).^2;
     end
 end
 pseudoPdf = exp(real(propFunc));

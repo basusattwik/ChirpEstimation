@@ -9,11 +9,15 @@ clc
 
 %% General parameters
 
+% Random seed
+seed = 12345;
+rng(seed);
+
 % Domain of integration
 x = -10:1e-4:10;
 
 % Lambdas for Pincus
-lambda = [0.05, 0.5, 1, 10, 50];
+lambda = [0.05, 0.5, 1, 5, 10];
 
 % Number of draws for Smirnov and Importance Sampling
 ndraws = 100000;

@@ -17,7 +17,7 @@ f1_1 = 15;
 k_1  = (f1_1 - f0_1) / Td;
 
 f0_2 = 7; 
-f1_2 = 23;
+f1_2 = 21;
 k_2  = (f1_2 - f0_2) / Td;
 
 phi = [f0_1, k_1; ...
@@ -156,7 +156,7 @@ subplot(3,1,1)
     title('$x_1 + x_2$', 'interpreter', 'latex');
 subplot(3,1,2)
     plot(tx, imag(x1)); hold on;
-    plot(tx, imag(x1Hat));
+    plot(tx, imag(x2Hat));
     grid on; grid minor;
     xlabel('Time (s)');
     ylabel('Amp.');
@@ -164,7 +164,7 @@ subplot(3,1,2)
     title('$x_1$', 'interpreter', 'latex');
 subplot(3,1,3)
     plot(tx, imag(x2)); hold on;
-    plot(tx, imag(x2Hat));
+    plot(tx, imag(x1Hat));
     grid on; grid minor;
     xlabel('Time (s)');
     ylabel('Amp.');
