@@ -8,7 +8,7 @@ clc
 fs = 200; % Hz
 Td = 1; % 1 sec
 t  = 0:1/fs:Td-1/fs;
-f0 = 30;
+f0 = 30;                                                                                                                                                                                                                                                                                                                                                                                                                                            
 m0 = 10;
 x  = sin(2*pi * (f0*t + 0.5*m0*t.^2)).';
 
@@ -25,7 +25,7 @@ mx  = 0:0.05:20;
 Jfm   = zeros(numel(fx), numel(mx));
 feJfm = zeros(numel(fx), numel(mx));
 meJfm = zeros(numel(fx), numel(mx));
-lambda = 10;
+lambda = 3;
 for find = 1:numel(fx)
     for mind = 1:numel(mx)
         error = y - xhat(fx(find),mx(mind),t);
@@ -41,7 +41,7 @@ eJfm = exp(lambda * Jfm);
 
 %% Pincus Maximization
 
-lambda = 200;
+lambda = 5;
 
 den  = trapz(fx, trapz(mx, eJfm, 2));
 fopt = trapz(fx, trapz(mx, feJfm, 2)) / den;
