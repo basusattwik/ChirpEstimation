@@ -10,7 +10,7 @@ end
 
 obj.H = zeros(2*obj.N, Nc);
 for c = 1:Nc
-    yc = genChirpSignal(obj); % Nc and alpha arguments are set to 1 here
+    yc = obj.genChirpSignal(obj); % Nc and alpha arguments are set to 1 here. Make this modification
     obj.H(:,c) = [real(yc) ; imag(yc)];
 end
 
