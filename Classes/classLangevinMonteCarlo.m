@@ -12,6 +12,8 @@ classdef classLangevinMonteCarlo
         % Parameters 
         theta;
         dtheta;
+        costJ; 
+        noise; 
 
     end
 
@@ -22,10 +24,15 @@ classdef classLangevinMonteCarlo
             obj.Property1 = inputArg1 + inputArg2;
         end
 
-        function outputArg = method1(obj,inputArg)
+        function outputArg = runLmcProcess(obj,cpe)
             %METHOD1 Summary of this method goes here
             %   Detailed explanation goes here
-            outputArg = obj.Property1 + inputArg;
+            
+            obj.dtheta = [cpe.dJ_beta; cpe.dJ_gamma, cpe.dJ_phi];
+
+            for itr = 1:numItr
+                obj.theta  = obj.theta - obj.stepSize * obj.dtheta + sqrt(obj.stepSize / obj.lambda) * randn(size(obj.dtheta));
+            end
         end
     end
 end
