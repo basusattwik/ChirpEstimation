@@ -2,18 +2,19 @@ function obj = compBasisSignals(obj)
 %GENCHIRPSIGNAL Summary of this function goes here
 %   Detailed explanation goes here
 
+% Cache some variables for speed
 N  = obj.N;
 fs = obj.fs;
 c  = obj.c;
 
 phiEstCell = obj.phiEstCell;
-betaEst  = obj.betaEst;
-gammaEst = obj.gammaEst;
+betaEst    = obj.betaEst;
+gammaEst   = obj.gammaEst;
 
 % max polynomial degree
-P = size(obj.phi, 1);
+P = size(phiEstCell{1,c}, 1);
 
-if ~strcmpi(obj.bAmpGamma)
+if ~obj.bAmpGamma
     for n = 1:N % -- loop over number of samples
     
         % Get the amplitude envelope

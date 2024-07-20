@@ -29,7 +29,8 @@ for c = 1:Nc  % -- loop over number of chirps
 end % -- end loop over number of samples
 
 % Combined to form multicomponent signal
-obj.ym = sum(obj.xm, 2);
+obj.ym    = sum(obj.xm, 2);
+obj.ymvec = [real(obj.ym); imag(obj.ym)];
 
 end
 

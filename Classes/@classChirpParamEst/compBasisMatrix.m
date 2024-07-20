@@ -6,8 +6,9 @@ Nc = obj.Nc;
 
 obj.H = zeros(2*obj.N, Nc);
 for c = 1:Nc
-    yc = obj.compBasisSignals(); % Nc and alpha arguments are set to 1 here. Make this modification
-    obj.H(:,c) = [real(yc) ; imag(yc)];
+    obj.c = c;
+    obj = obj.compBasisSignals(); 
+    obj.H(:,c) = [real(obj.x) ; imag(obj.x)];
 end
 
 end
