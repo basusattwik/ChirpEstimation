@@ -12,7 +12,7 @@ betaEst    = obj.betaEst;
 gammaEst   = obj.gammaEst;
 
 % max polynomial degree
-P = size(phiEstCell{1,c}, 1);
+P = size(phiEstCell{1,c},1);
 
 if ~obj.bAmpGamma
     for n = 1:N % -- loop over number of samples
@@ -39,7 +39,11 @@ else
 end
 
 % Multiply the two
-obj.x = obj.A .* obj.e;
+if obj.bAmpEnv
+    obj.x = obj.A .* obj.e;
+else
+    obj.x = obj.e;
+end
 
 end
 

@@ -3,6 +3,6 @@ function obj = compCostFunc(obj)
 %   Detailed explanation goes here
 
 % Cost function value
-obj.J = obj.ymvec.' * obj.P * obj.ymvec;
+obj.J = obj.ymvec.' * obj.Po * obj.ymvec;
 
 end

@@ -5,7 +5,6 @@ function obj = compAllGradients(obj)
 % Cache some variables for speed
 Nc    = obj.Nc;
 Pc    = obj.Pc;
-ym    = obj.ym;
 ymvec = obj.ymvec;
 Po    = obj.Po;
 Hhat  = obj.Hhat;
@@ -16,7 +15,7 @@ for c = 1:Nc
     obj.c = c;
 
     % Compute the basis signal once for beta and phi
-    obj  = obj.compBasisSignals();
+    obj  = obj.compBasisSignals(); % I think we can reuse H here. Optimize!
     temp = obj.x;
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -27,7 +26,7 @@ for c = 1:Nc
     obj.dH_beta(:,c) = [-(obj.n / obj.fs) .* real(temp) ; ...
                         -(obj.n / obj.fs) .* imag(temp)];
 
-    obj.dJ_beta(1,c) = 2 * ymvec.' * Po * obj.dH_beta(:,c) * Hhat(c,:) * ymvec;
+    obj.dJ_beta(1,c) = -2 * ymvec.' * Po * obj.dH_beta(:,c) * Hhat(c,:) * ymvec;
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % --- Gradient of J wrt phi ---
@@ -41,7 +40,7 @@ for c = 1:Nc
         obj.dH_phi(:,c,k) = [-(obj.n ./ obj.fs).^p .* imag(temp) ; ...
                               (obj.n ./ obj.fs).^p .* real(temp)];
 
-        obj.dJ_phi(1,k) = 2 * ymvec.' * Po * obj.dH_phi(:,c,k) * Hhat(c,:) * ymvec;
+        obj.dJ_phi(1,k) = -2 * ymvec.' * Po * obj.dH_phi(:,c,k) * Hhat(c,:) * ymvec;
 
         k = k + 1;
     end
@@ -56,10 +55,10 @@ for c = 1:Nc
     obj.bAmpGamma = false;
 
     % Get the gradient of H wrt gamma 
-    obj.dH_gamma(:,c) = [-(obj.n / obj.fs) .* real(temp) ; ...
-                         -(obj.n / obj.fs) .* imag(temp)];
+    obj.dH_gamma(:,c) = [(obj.n / obj.fs) .* real(temp) ; ...
+                         (obj.n / obj.fs) .* imag(temp)];
 
-    obj.dJ_gamma(1,c) = 2 * ymvec.' * Po * obj.dH_gamma(:,c) * Hhat(c,:) * ymvec;
+    obj.dJ_gamma(1,c) = -2 * ymvec.' * Po * obj.dH_gamma(:,c) * Hhat(c,:) * ymvec;
 end
 
 end

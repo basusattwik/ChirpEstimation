@@ -6,41 +6,61 @@ clc
 
 %% Setup a multimodal function
 
-N    = 1000;
-beta = 1;
+c = 0.6;
 
 syms x
-% F  = -(0.2 * exp(-(x-6).^2) + 0.6 * exp(-x.^2) + 0.2 * exp(-(x+6).^2));
-% F  = -abs(sinc(x));
-F   = (x - 4).^2;
+F   = -((1-c)/8 * exp(-(x-8).^2 / 0.4)+ (1-c)/4 * exp(-(x-4).^2 / 0.4) + ...
+        c * exp(-x.^2 / 0.4) + ...
+       (1-c)/4 * exp(-(x+4).^2 / 0.4) + (1-c)/8 * exp(-(x+8).^2 / 0.4));
 dF  = diff(F);
-P   = exp(-beta * F);
 Fx  = matlabFunction(F);
 dFx = matlabFunction(dF);
-Px  = matlabFunction(P);
+Px   = @(T, x) exp(-1/T * Fx(x));
 
 %% Langevin Monte Carlo Updates
 
-L = 1000;
-
+L = 10000;
+d = 0.45;
 xt  = unifrnd(-10, 10, [1, 1]);
-eta = 0.1;
+
+xinit = xt;
+eta = 0.01;
+% b = 0.1;
+% gamma = 0.95;
 
 x_stores = zeros(L,1);
-
+invTempSave = zeros(L,1);
+etaSave = zeros(L,1);
+T = 1;
 for l = 1:L
-    xt = xt - eta * dFx(xt) + sqrt(2 * eta / beta) * randn(1,1);
-    x_stores(l,1) = xt;
+    % Simulated Tempering
+    if mod(l,50) == 0
+        T = d / log(l); %beta + exp(l * 0.000001);
+    end
+
+    % Stepsize Annealing
+    % if mod(l,500) == 0
+    %     eta = eta * (b + l)^(-gamma);
+    % end
+
+    % Langevin Update
+    xp = xt - eta  * (1/T) * dFx(xt) + sqrt(2 * eta) * randn(1,1);
+
+    % Metropolis Adjustment
+    alpha = min(1, Px(T, xp) / Px(T, xt));
+    if rand(1,1) <= alpha
+        xt = xp;
+    end
+
+    x_stores(l,1)    = xt;    
+    invTempSave(l,1) = 1/T;
+    etaSave(l,1) = eta;
+
 end
-
-%% Simulated Tempering
-
-beta = 1:-0.05:0.01;
-nSwap   = 5;
-nChains = numel(beta);
 
 %% Find optimum
 
+N = 10000;
 x = linspace(-10, 10, N);
 
 [~, minInd] = min(Fx(x_stores));
@@ -48,41 +68,62 @@ x_opt = x_stores(minInd);
 
 gradF = dFx(x_stores);
 
-figure(1)
-subplot(5,1,1)
+Pend = exp(-(invTempSave(end)) * F);
+Pini = exp(-(invTempSave(1)) * F);
+Pxend  = matlabFunction(Pend);
+Pxini  = matlabFunction(Pini);
+
+figure('windowstyle','docked')
+tiledlayout flow
+nexttile
     plot(x, Fx(x));
     grid on; grid minor;
     xlabel('x');
     ylabel('$f(x)$', 'Interpreter','latex');
     title('Function');
-subplot(5,1,2)
-    plot(x, Px(x));
+nexttile
+    yyaxis right
+    plot(x, Pxend(x)); hold on;
+    yyaxis left
+    plot(x, Pxini(x));
     grid on; grid minor;
     xlabel('x');
     ylabel('$f(x)$', 'Interpreter','latex');
     title('Gibbs Density');
-subplot(5,1,3)
-    plot(x_stores, 1:L);
+    legend('Initial', 'Final');
+nexttile
+    plot(x_stores, 1:L); hold on;
+    stem(xinit, 0);
     grid on; grid minor;
     xlabel('x');
     ylabel('Iterations');
     xlim([-10 10]);
     set(gca, 'ydir','reverse')
     title('Sample Path');
-subplot(5,1,4)
+nexttile
+    histogram(x_stores);%, numel(U));
+    xlim([-10,10]);
+    title('Histogram');
+    grid on; 
+nexttile
+    plot(1:L, invTempSave);
+    grid on; grid minor;
+    xlabel('Iterations');
+    ylabel('beta');
+    title('Inverse Temperature');
+nexttile
     plot(1:L, gradF);
     grid on; grid minor;
     xlabel('x');
     ylabel('$\nabla f(x)$', 'Interpreter','latex');
     title('Gradient');
-subplot(5,1,5)
-    histogram(x_stores);%, numel(U));
-    xlim([-10,10]);
-    title('Histogram');
-    grid on; 
+% nexttile
+%     plot(1:L, etaSave);
+%     grid on; grid minor;
+%     xlabel('x');
+%     ylabel('Stepsize');
+%     title('Stepsize Annealing');
 
-%% Add heating to distribution
 
-function pTx = getTemperedDistribution(f, beta)
-    pTx = exp(-1/beta * f(x));
-end
+disp(['Initial inv. temp = ', num2str(invTempSave(1))]);
+disp(['Final inv. temp   = ', num2str(invTempSave(end))]);

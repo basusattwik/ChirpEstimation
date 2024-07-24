@@ -23,10 +23,13 @@ for c = 1:Nc  % -- loop over number of chirps
 
     end % -- end loop over number of chirps
 
-    % Multiply the two
-    obj.xm(:,c) = obj.Am(:,c) .* obj.em(:,c);
-
 end % -- end loop over number of samples
+
+if obj.bAmpEnv
+    obj.xm = obj.Am .* obj.em;
+else
+    obj.xm = obj.em;
+end
 
 % Combined to form multicomponent signal
 obj.ym    = sum(obj.xm, 2);

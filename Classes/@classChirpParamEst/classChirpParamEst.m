@@ -10,6 +10,7 @@ classdef classChirpParamEst < handle
         Nc = 2;    % Number of Chirps
         N  = 1000; % Total number of samples (fs * Td)
         bAmpGamma = false;
+        bAmpEnv   = true;
 
         % Indexing
         n;        % Sample indexing vector from 0:N-1
@@ -106,11 +107,11 @@ classdef classChirpParamEst < handle
         obj = genChirpSignal(obj);
         obj = addGaussianNoise(obj);
         obj = initChirpSignals(obj);
-        obj = setupArrays(obj); % Fill in!!!!!!!!!
         obj = resetArrays(obj);
 
         % Computational steps
         obj = compCostFunc(obj);
+        obj = evalCostFunc(obj, params);
         obj = compBasisSignals(obj);
         obj = compBasisMatrix(obj);
         obj = compProjMatrix(obj);
