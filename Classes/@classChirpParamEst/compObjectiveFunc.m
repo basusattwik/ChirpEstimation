@@ -3,6 +3,6 @@ function obj = compObjectiveFunc(obj)
 %   Detailed explanation goes here
 
 % Cost function value
-obj.J = obj.ym' * obj.Po * obj.ym; % Force it to be real to prevent tiny imaginary values ~ e-16
+obj.J = real(obj.ym' * obj.Po * obj.ym); % Force it to be real to prevent tiny imaginary values ~ e-16
 
 end
