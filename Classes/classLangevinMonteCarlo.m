@@ -14,14 +14,16 @@ classdef classLangevinMonteCarlo < handle
         numParams;
         theta;
         dtheta;
-        costJ; 
+        objectiveJ; 
         noise; 
+        paramOpt; % Optimum/Almost-optimum parameters
+        numSamplesToUse;
 
         % External
         cpe; % classChirpParamEst
 
         % For analysis
-        costFunc;
+        objectiveFunc;
         params;
         grads;
         gradNorm;
@@ -41,9 +43,10 @@ classdef classLangevinMonteCarlo < handle
             obj.numIter  = tuning.numIter;
             obj.temper   = tuning.initInvTemp;
             obj.tempSwap = tuning.tempSwap;
+            obj.numSamplesToUse = tuning.numSamplesToUse;
 
             % Analysis buffers
-            obj.costFunc = zeros(obj.numIter, 1);
+            obj.objectiveFunc = zeros(obj.numIter, 1);
             obj.params   = zeros(obj.numParams, obj.numIter);
             obj.grads    = zeros(obj.numParams, obj.numIter);
             obj.gradNorm = zeros(obj.numIter, 1);
@@ -51,7 +54,7 @@ classdef classLangevinMonteCarlo < handle
             obj.bAccept  = zeros(obj.numIter, 1);
 
             % Init params and gradient
-            obj.theta  = randn(obj.numParams, 1); % what is a good init [0, 0, 20000, 20000, 0, 40, 0, 65].'
+            obj.theta  = [5, 7, 5, 4, 0, 40, 0, 65].'; %randn(obj.numParams, 1); % what is a good init [0, 0, 20000, 20000, 0, 40, 0, 65].'
             obj.dtheta = zeros(obj.numParams, 1); 
 
             % Call constructor of cpe class
@@ -69,6 +72,8 @@ classdef classLangevinMonteCarlo < handle
                               'CreateCancelBtn', 'setappdata(gcbf, ''canceling'', 1)');
             for itr = 1:obj.numIter
 
+                % parfor np = 1:numParticles
+                % end
                 % Call the process function for CPE
                 obj.cpe = obj.cpe.runCpeCore(obj.theta); % This gives the gradients wrt all params
 
@@ -77,7 +82,7 @@ classdef classLangevinMonteCarlo < handle
                 thetaProp  = obj.theta - obj.stepSize .* obj.dtheta + sqrt(2 * obj.stepSize / obj.temper) .* randn(obj.numParams, 1);     
                
                 % Run Metropolis Adjustment
-                alpha = min(1, exp(-obj.temper * (evalCostFunc(obj.cpe, thetaProp) - obj.cpe.J)));
+                alpha = min(1, exp(-obj.temper * (obj.cpe.evalObjectiveFunc(thetaProp) - obj.cpe.J)));
                 if rand(1,1) <= alpha
                     obj.theta = thetaProp;
                     obj.bAccept(itr,1) = 1;
@@ -85,7 +90,7 @@ classdef classLangevinMonteCarlo < handle
 
                 % Run Simulated Tempering
                 if mod(itr, obj.tempSwap) == 0
-                    obj.temper = log(itr) / 0.2; %beta + exp(l * 0.000001);
+                    obj.temper = log(itr) / 0.9; %beta + exp(l * 0.000001);
                 end
                 
                 % Do Stepsize Annealing
@@ -93,7 +98,7 @@ classdef classLangevinMonteCarlo < handle
 
 
                 % Fill analysis arrays
-                obj.costFunc(itr,1) = obj.cpe.J;
+                obj.objectiveFunc(itr,1) = obj.cpe.J;
                 obj.params(:,itr)   = obj.theta;
                 obj.grads(:,itr)    = obj.dtheta;
                 obj.gradNorm(itr,1) = norm(obj.dtheta);
@@ -109,13 +114,21 @@ classdef classLangevinMonteCarlo < handle
                 end
             end
 
+            % Find the optimum parameter vector
+            paramSet = obj.params(:, obj.numIter - obj.numSamplesToUse:end);
+            objectiveFuncVals = zeros(obj.numSamplesToUse, 1);
+            for nind = 1:obj.numSamplesToUse
+                objectiveFuncVals(nind, 1) = obj.cpe.evalObjectiveFunc(real(paramSet(:, nind)));
+            end
+            [~, paramOptInd] = min(objectiveFuncVals);
+            obj.paramOpt = paramSet(:, paramOptInd);
+
             % Finally, compute the scalar gains
-            obj.cpe = obj.cpe.compScalarGains();
+            obj.cpe = obj.cpe.compScalarGains(); % This should now take the optimum param from above
             
             % Insert analysis buffers for storing data
             % ... ToDo ...
 
-            close(wbar);
             delete(wbar);
             disp('Simulation complete!');
         end

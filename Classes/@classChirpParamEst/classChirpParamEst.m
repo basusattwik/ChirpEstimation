@@ -25,6 +25,7 @@ classdef classChirpParamEst < handle
         e;        % Chirps without amplitude envelope (N x Nc)
         u;        % Chirps with amplitude envelepe (N x Nc)
         x;        % Clean chirp (N x 1)
+        xg;       % Basis for gamma (Nx1)
         w;        % White Gaussian noise at specified snr (N x 1)
 
         % Generated signals
@@ -33,7 +34,6 @@ classdef classChirpParamEst < handle
         um;       % Chirps with amplitude envelepe (N x Nc)
         xm;       % Clean mixture of chirps (N x 1)
         ym;       % Noisy mixture of chirps (N x 1)
-        ymvec;    % 2N elements of [real(ym) | imag(ym)].'
         wm;       % White Gaussian noise at specified snr (N x 1)
 
         % Chirp properties (settings)
@@ -45,7 +45,7 @@ classdef classChirpParamEst < handle
         snr;      % Signal-to-Noise ratio in dB
 
         % Terms used in iterative estimation
-        J;        % Cost function value (scalar)
+        J;        % Objective function value (scalar)
         alphaEst; % Scalar gains (1 x Nc)
         betaEst;  % Amplitude envelope parameter (1 x Nc)
         gammaEst; % The other amplitude envelope parameter (1 x Nc)
@@ -64,8 +64,6 @@ classdef classChirpParamEst < handle
         dJ_beta;  % Gradient of J wrt beta  (1 x Nc)
         dJ_gamma; % Gradient of J wrt gamma (1 x Nc)
         
-        % MCMC algorithm
-        % lmc = classLangevinMonteCarlo;
     end
 
     methods
@@ -97,7 +95,6 @@ classdef classChirpParamEst < handle
             % Init chirp signals based on the settings file
             obj = obj.resetArrays();
             obj = obj.initChirpSignals();
-
         end
 
         % Function declarations are provided below. Definitions are in
@@ -110,8 +107,8 @@ classdef classChirpParamEst < handle
         obj = resetArrays(obj);
 
         % Computational steps
-        obj = compCostFunc(obj);
-        obj = evalCostFunc(obj, params);
+        obj = compObjectiveFunc(obj);
+        obj = evalObjectiveFunc(obj, params);
         obj = compBasisSignals(obj);
         obj = compBasisMatrix(obj);
         obj = compProjMatrix(obj);

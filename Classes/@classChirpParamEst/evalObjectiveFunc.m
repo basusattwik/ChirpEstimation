@@ -1,20 +1,26 @@
-function J = evalCostFunc(obj, params)
+function J = evalObjectiveFunc(obj, params)
 %UNTITLED3 Summary of this function goes here
 %   Detailed explanation goes here
 
+% Cache for speed
 fs = obj.fs;
 N  = obj.N;
 Nc = obj.Nc;
 Pc = obj.Pc;
+ym = obj.ym;
 
+% Preallocate for speed
 beta  = zeros(1, obj.Nc); 
 gamma = zeros(1, obj.Nc);
 phi = cell(1, obj.Nc);
 A = zeros(obj.N, 1);
 e = zeros(obj.N, 1);
-H = zeros(2*obj.N, Nc);
+H = zeros(obj.N, Nc);
 
+% Avoiding divides
+oneOverFs = 1/fs;
 
+% Extract current params into data structs
 for c = 1:Nc
     beta(1,c)  = params(c,1);
     gamma(1,c) = params(c + Nc,1);
@@ -25,25 +31,27 @@ for c = 1:Nc
     startInd = startInd + Pc(c);
 end
 
+% Compute basis matrix
 for c = 1:Nc
     P = size(phi{1,c},1);
+    pvec = (0:P-1).';
     for n = 1:N % -- loop over number of samples
         % Get the amplitude envelope
-        A(n,1) = exp(-beta(1,c) * n/fs) * (1 - exp(-gamma(1,c) * n/fs));
+        A(n,1) = exp(-beta(1,c) * n * oneOverFs) * (1 - exp(-gamma(1,c) * n * oneOverFs));
     
         % Get the exponential polynomial phase sinusoid
-        npvec = ((n-1) / fs).^(0:P-1).'; % vectors of powers of n/fs
+        npvec  = ((n-1) * oneOverFs).^pvec; % vectors of powers of n/fs
         e(n,1) = exp(2*pi*1j .* (phi{1,c}.' * npvec));
     end
     x = A .* e;
-    H(:,c) = [real(x) ; imag(x)];
+    H(:,c) = x;
 end
 
 % Get the projection matrix and the orthogonal projection matrix
-P  = H * pinv(H.' * H) * H.'; 
+P  = H * (H' * H)^(-1) * H'; 
 Po = eye(size(P)) - P;
 
 % Cost function value
-J = obj.ymvec.' * Po * obj.ymvec;
+J = real(ym' * Po * ym);
 
 end

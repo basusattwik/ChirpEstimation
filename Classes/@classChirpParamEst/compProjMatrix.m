@@ -3,10 +3,10 @@ function obj = compProjMatrix(obj)
 %   Detailed explanation goes here
 
 % Compute Hhat
-obj.Hhat = pinv(obj.H.' * obj.H) * obj.H.'; 
+obj.Hhat = (obj.H' * obj.H)^(-1) * obj.H'; 
 
 % Get the projection matrix and the orthogonal projection matrix
 obj.P  = obj.H * obj.Hhat;
-obj.Po = eye(size(obj.P)) - obj.P;
+obj.Po = eye(obj.N, obj.N) - obj.P;
 
 end

@@ -4,11 +4,10 @@ function obj = compBasisMatrix(obj)
 
 Nc = obj.Nc;
 
-obj.H = zeros(2*obj.N, Nc);
 for c = 1:Nc
     obj.c = c;
     obj = obj.compBasisSignals(); 
-    obj.H(:,c) = [real(obj.x) ; imag(obj.x)];
+    obj.H(:,c) = obj.x;
 end
 
 end
