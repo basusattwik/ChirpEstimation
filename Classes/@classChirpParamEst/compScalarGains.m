@@ -3,6 +3,6 @@ function obj = compScalarGains(obj)
 %   Detailed explanation goes here
 
 % Compute alpha 
-obj.alpha = obj.Hhat * obj.ymvec; 
+obj.alpha = obj.Hhat * obj.ym; 
 
 end

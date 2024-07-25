@@ -15,7 +15,7 @@ obj = obj.compProjMatrix();
 obj = obj.compAllGradients();
 
 % Compute the new cost function value
-obj = obj.compCostFunc();
+obj = obj.compObjectiveFunc();
 
 end
 

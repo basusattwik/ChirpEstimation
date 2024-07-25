@@ -8,21 +8,19 @@ fs = obj.fs;
 
 % Calculate the polynomial chirp
 for c = 1:Nc  % -- loop over number of chirps
-
     % max polynomial degree
     P = size(obj.phi{1,c},1);
 
-    for n = 1:N % -- loop over number of samples
+    for nind = 1:N % -- loop over number of samples
 
         % Get the amplitude envelope
-        obj.Am(n,c) = obj.alpha(1,c) * exp(-obj.beta(1,c) * n/fs) * (1 - exp(-obj.gamma(1,c) * n/fs));
+        obj.Am(nind,c) = obj.alpha(1,c) * exp(-obj.beta(1,c) * nind/fs) * (1 - exp(-obj.gamma(1,c) * nind/fs));
 
         % Get the exponential polynomial phase sinusoid
-        npvec = ((n-1) / fs).^(0:P-1).'; % vectors of powers of n/fs
-        obj.em(n,c) = exp(2*pi*1j .* (obj.phi{:,c}.' * npvec));
+        npvec = ((nind-1) / fs).^(0:P-1).'; % vectors of powers of n/fs
+        obj.em(nind,c) = exp(2*pi*1j .* (obj.phi{:,c}.' * npvec));
 
     end % -- end loop over number of chirps
-
 end % -- end loop over number of samples
 
 if obj.bAmpEnv
@@ -32,8 +30,7 @@ else
 end
 
 % Combined to form multicomponent signal
-obj.ym    = sum(obj.xm, 2);
-obj.ymvec = [real(obj.ym); imag(obj.ym)];
+obj.ym = sum(obj.xm, 2);
 
 end
 
