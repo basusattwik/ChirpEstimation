@@ -25,7 +25,7 @@ for c = 1:Nc
 
     % Get the gradient of H wrt beta first
     obj.dH_beta(:,c) = -(obj.n .* oneOverFs) .* H(:,c);
-    obj.dJ_beta(1,c) = real(-2 * ym' * Po * obj.dH_beta(:,c) * Hhat(c,:) * ym);
+    obj.dJ_beta(1,c) = -2 * real(ym' * Po * obj.dH_beta(:,c) * Hhat(c,:) * ym);
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % --- Gradient of J wrt phi ---
@@ -37,7 +37,7 @@ for c = 1:Nc
 
         % Get the gradient of H wrt phi
         obj.dH_phi(:,c,k) = 2*pi*1j * (obj.n .* oneOverFs).^p .* H(:,c);
-        obj.dJ_phi(1,k)   = real(-2 * ym' * Po * obj.dH_phi(:,c,k) * Hhat(c,:) * ym);
+        obj.dJ_phi(1,k)   = -2 * real(ym' * Po * obj.dH_phi(:,c,k) * Hhat(c,:) * ym);
 
         k = k + 1;
     end
@@ -52,7 +52,7 @@ for c = 1:Nc
 
     % Get the gradient of H wrt gamma 
     obj.dH_gamma(:,c) = (obj.n .* oneOverFs) .* obj.xg;
-    obj.dJ_gamma(1,c) = real(-2 * ym' * Po * obj.dH_gamma(:,c) * Hhat(c,:) * ym);
+    obj.dJ_gamma(1,c) = -2 * real(ym' * Po * obj.dH_gamma(:,c) * Hhat(c,:) * ym);
 end
 
 end
