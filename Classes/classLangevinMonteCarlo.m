@@ -75,8 +75,8 @@ classdef classLangevinMonteCarlo < handle
             obj.saveObjectiveFunc = zeros(obj.numParticles, obj.numIter);
 
             % Init params and gradient
-            paramInit = [2, 20, 0].';
-            obj.param = [repmat(paramInit, 1, obj.numParticles); unifrnd(0,50, 1, obj.numParticles)];
+            paramInit = [5, 2, 1.5, 40].';
+            obj.param = [repmat(paramInit, 1, obj.numParticles)];
             % obj.param = unifrnd(0, 50, obj.numParams, obj.numParticles);
             % 10*rand(obj.numParams, obj.numParticles); % what is a good init [5, 7, 5, 4, 0, 40, 0.5, 0, 65, 1].'; % 
             obj.grads = zeros(obj.numParams, obj.numParticles); 
@@ -106,37 +106,22 @@ classdef classLangevinMonteCarlo < handle
                 for itr = 1:obj.numIter
 
                     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                    %
                     % --- Run MLE Model for Chirp Parameter Estimation ---
+                    %
                     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
                     % Call the process function for CPE. TODO: Parallelize?
                     for np = 1:obj.numParticles
-                        obj.cpe{1,np}.runCpeCore(obj.param(:,np)); % This gives the gradients wrt all params for all particles
+                        obj.cpe{1,np} = obj.cpe{1,np}.runCpeCore(obj.param(:,np)); % This gives the gradients wrt all params for all particles
                     end
-                    
-                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                    % --- Langevin Monte Carlo ---
-                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
+
                     for np = 1:obj.numParticles
 
-                        % Do Langevin updates on all params
-                        obj.grads(:,np) = [obj.cpe{1,np}.dJ_beta.'; obj.cpe{1,np}.dJ_gamma.'; obj.cpe{1,np}.dJ_phi.'];               
-                        paramProp = obj.param(:,np) - obj.stepSize(:,np) .* obj.grads(:,np) + sqrt(2 * obj.stepSize(:,np) / obj.temper(1,np)) .* randn(obj.numParams, 1);     
-                       
-                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                        % --- Apply Metropolis step ---
-                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
-                        % Run Metropolis Adjustment
-                        alpha = min(1, exp(-obj.temper * (obj.cpe{1,np}.evalObjectiveFunc(paramProp) - obj.cpe{1,np}.J)));
-                        if rand(1,1) <= alpha
-                            obj.param(:,np) = paramProp;
-                            obj.savebAccept(np,itr) = 1;
-                        end
-        
                         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                        %
                         % --- Simulated Tempering ---
+                        %
                         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
                         % Run Simulated Tempering
@@ -145,7 +130,9 @@ classdef classLangevinMonteCarlo < handle
                         end
                         
                         %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                        %
                         % --- Stepsize Annealing ---
+                        %
                         %%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
                         % Do Stepsize Annealing         
@@ -158,11 +145,36 @@ classdef classLangevinMonteCarlo < handle
                         end
         
                         % Keep track of average gradient norm
-                        obj.gradNorm(1,np)    = norm(obj.grads(:,np));
+                        obj.gradNorm(1,np)    = norm(obj.grads(:,np))^2;
                         obj.avgGradNorm(1,np) = (1 - obj.avgConst) .* abs(obj.gradNorm(1,np)) + obj.avgConst .* obj.avgGradNorm(1,np);
 
+                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                        %
+                        % --- Langevin Monte Carlo ---
+                        %
+                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+                        % Do Langevin updates on all params
+                        obj.grads(:,np) = [obj.cpe{1,np}.dJ_beta.'; obj.cpe{1,np}.dJ_gamma.'; obj.cpe{1,np}.dJ_phi.'];               
+                        paramProp = obj.param(:,np) - obj.stepSize(:,np) .* obj.grads(:,np) + sqrt(2 * obj.stepSize(:,np) ./ obj.temper(1,np)) .* randn(obj.numParams, 1);     
+                       
+                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                        %
+                        % --- Apply Metropolis step ---
+                        %
+                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+                        % Run Metropolis Adjustment
+                        alpha = min(1, exp(-obj.temper * (obj.cpe{1,np}.evalObjectiveFunc(paramProp) - obj.cpe{1,np}.J)));
+                        if rand(1,1) <= alpha
+                            obj.param(:,np) = paramProp;
+                            obj.savebAccept(np,itr) = 1;
+                        end
+        
                         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                        %
                         % --- Save Data for Analysis ---
+                        %
                         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
                         
                         % Fill analysis arrays
@@ -172,6 +184,7 @@ classdef classLangevinMonteCarlo < handle
                         obj.saveInvTemp(np,itr)  = obj.temper(1,np);
                         obj.saveStepSize(:,np,itr)    = obj.stepSize(:,np); 
                         obj.saveObjectiveFunc(np,itr) = obj.cpe{1,np}.J;
+
                     end % end numParticles
 
                     % Update waitbar and message
@@ -185,7 +198,9 @@ classdef classLangevinMonteCarlo < handle
                 end % end numIter
 
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                %
                 % --- Find the optimum parameter vector ---
+                %
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
                 % Find "personal" best for each particle

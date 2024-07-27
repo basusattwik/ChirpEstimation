@@ -12,10 +12,10 @@ ym = obj.ym;
 % Preallocate for speed
 beta  = zeros(1, Nc); 
 gamma = zeros(1, Nc);
-phi = cell(1, Nc);
-A = zeros(N, 1);
-e = zeros(N, 1);
-H = zeros(N, Nc);
+phi   = cell(1, Nc);
+A     = zeros(N, 1);
+e     = zeros(N, 1);
+H     = zeros(N, Nc);
 
 % Avoiding divides
 oneOverFs = 1/fs;

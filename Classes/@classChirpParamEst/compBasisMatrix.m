@@ -4,6 +4,7 @@ function obj = compBasisMatrix(obj)
 
 Nc = obj.Nc;
 
+% Fill columns with the basis signal 
 for c = 1:Nc
     obj.c = c;
     obj = obj.compBasisSignals(); 

@@ -58,8 +58,8 @@ classdef classChirpParamEst < handle
 
         % Gradients
         dH_phi;   % Gradient of H wrt phi   (N x Nc x K)
-        dH_beta;  % Gradient of H wrt beta  (N x Nc)
-        dH_gamma; % Gradient of H wrt gamma (N x Nc)
+        dH_beta;  % Gradient of H wrt beta  (N x Nc x Nc)
+        dH_gamma; % Gradient of H wrt gamma (N x Nc x Nc)
         dJ_phi;   % Gradient of J wrt phi   (1 x K)
         dJ_beta;  % Gradient of J wrt beta  (1 x Nc)
         dJ_gamma; % Gradient of J wrt gamma (1 x Nc)
