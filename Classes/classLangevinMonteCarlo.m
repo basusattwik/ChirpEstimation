@@ -14,11 +14,13 @@ classdef classLangevinMonteCarlo < handle
         stepSizeMax;
 
         % Parameters 
+        numParticles;
         numParams;
         param;
         grads;
         objectiveJ; 
-        paramOpt; % Optimum/Almost-optimum parameters
+        paramOptPersonalBest; % Optimum/Almost-optimum parameters
+        paramOptCollectiveBest;
         numSamplesToUse;
         gradNorm;
         avgGradNorm;
@@ -45,107 +47,133 @@ classdef classLangevinMonteCarlo < handle
             obj.numParams = setup.numParams;
 
             % Set tuning for hyperparams
-            obj.stepSize = tuning.stepSize;
-            obj.stepSizeMax = tuning.stepSizeMax;
             obj.numIter  = tuning.numIter;
-            obj.temper   = tuning.initInvTemp;
             obj.tempSwap = tuning.tempSwap;
             obj.avgConst = tuning.avgConst;
             obj.numSamplesToUse = tuning.numSamplesToUse;
             obj.stepSizeConst   = tuning.stepSizeConst;
+            obj.numParticles    = tuning.numParticles;
+
+            obj.stepSize    = zeros(obj.numParams, obj.numParticles);
+            obj.stepSizeMax = zeros(obj.numParams, obj.numParticles);
+            obj.temper      = zeros(1, obj.numParticles);
+            for np = 1:obj.numParticles
+                obj.temper(1,np)   = tuning.initInvTemp;
+                obj.stepSize(:,np) = tuning.stepSize;
+                for npr = 1:obj.numParams
+                    obj.stepSizeMax(npr,np) = tuning.stepSizeMax;
+                end
+            end
 
             % Analysis buffers
-            obj.saveParams   = zeros(obj.numParams, obj.numIter);
-            obj.saveGrads    = zeros(obj.numParams, obj.numIter);
-            obj.saveGradNorm = zeros(obj.numIter, 1);
-            obj.saveInvTemp  = zeros(obj.numIter, 1);
-            obj.savebAccept  = zeros(obj.numIter, 1);
-            obj.saveStepSize = zeros(obj.numParams, obj.numIter);
-            obj.saveObjectiveFunc = zeros(obj.numIter, 1);
+            obj.saveParams   = zeros(obj.numParams, obj.numParticles, obj.numIter);
+            obj.saveGrads    = zeros(obj.numParams, obj.numParticles, obj.numIter);
+            obj.saveGradNorm = zeros(obj.numParticles, obj.numIter);
+            obj.saveInvTemp  = zeros(obj.numParticles, obj.numIter);
+            obj.savebAccept  = zeros(obj.numParticles, obj.numIter);
+            obj.saveStepSize = zeros(obj.numParams, obj.numParticles, obj.numIter);
+            obj.saveObjectiveFunc = zeros(obj.numParticles, obj.numIter);
 
             % Init params and gradient
-            obj.param = [5, 7, 5, 4, 0, 40, 0.5, 0, 65, 1].'; % randn(obj.numParams, 1); % what is a good init [0, 0, 20000, 20000, 0, 40, 0, 65].'
-            obj.grads = zeros(obj.numParams, 1); 
-            obj.avgGrads    = zeros(obj.numParams, 1);
-            obj.avgGradNorm = 0;
-            obj.gradNorm    = 0;
+            paramInit = [2, 20, 0].';
+            obj.param = [repmat(paramInit, 1, obj.numParticles); unifrnd(0,50, 1, obj.numParticles)];
+            % obj.param = unifrnd(0, 50, obj.numParams, obj.numParticles);
+            % 10*rand(obj.numParams, obj.numParticles); % what is a good init [5, 7, 5, 4, 0, 40, 0.5, 0, 65, 1].'; % 
+            obj.grads = zeros(obj.numParams, obj.numParticles); 
+            obj.avgGrads    = zeros(obj.numParams, obj.numParticles);
+            obj.avgGradNorm = zeros(1, obj.numParticles);
+            obj.gradNorm    = zeros(1, obj.numParticles);
+            obj.paramOptPersonalBest   = zeros(obj.numParams, obj.numParticles);
+            obj.paramOptCollectiveBest = zeros(obj.numParams, 1);
 
-            % Call constructor of cpe class
-            obj.cpe = classChirpParamEst(setup);
+            %  Call constructor of cpe class. Initialize several instances
+            %  of the class for each particle in the swarm
+            obj.cpe = cell(1,obj.numParticles);
+            for np = 1:obj.numParticles
+                obj.cpe{1,np} = classChirpParamEst(setup);
+            end
         end
 
         function obj = runLmcCore(obj)
             %RUNLMCCORE Summary of this method goes here
             %   Detailed explanation goes here
-           
 
             % Create a wait bar display
-            wbar = waitbar(0, 'Please wait', 'Name','Running Langevin Monte Carlo', ...
+            wbar = waitbar(0, 'Sit tight!', 'Name','Running Langevin Monte Carlo', ...
                               'CreateCancelBtn', 'setappdata(gcbf, ''canceling'', 1)');
 
             try 
                 for itr = 1:obj.numIter
-    
-                    % parfor np = 1:numParticles
-                    % end
-                    % Call the process function for CPE
-                    obj.cpe = obj.cpe.runCpeCore(obj.param); % This gives the gradients wrt all params
+
+                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                    % --- Run MLE Model for Chirp Parameter Estimation ---
+                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+                    % Call the process function for CPE. TODO: Parallelize?
+                    for np = 1:obj.numParticles
+                        obj.cpe{1,np}.runCpeCore(obj.param(:,np)); % This gives the gradients wrt all params for all particles
+                    end
                     
                     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                     % --- Langevin Monte Carlo ---
                     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-                    % Do Langevin updates on all params
-                    obj.grads = [obj.cpe.dJ_beta.'; obj.cpe.dJ_gamma.'; obj.cpe.dJ_phi.'];               
-                    paramProp = obj.param - obj.stepSize .* obj.grads + sqrt(2 * obj.stepSize / obj.temper) .* randn(obj.numParams, 1);     
-                   
-                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                    % --- Apply Metropolis step ---
-                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-                    % Run Metropolis Adjustment
-                    alpha = min(1, exp(-obj.temper * (obj.cpe.evalObjectiveFunc(paramProp) - obj.cpe.J)));
-                    if rand(1,1) <= alpha
-                        obj.param = paramProp;
-                        obj.savebAccept(itr,1) = 1;
-                    end
-    
-                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                    % --- Simulated Tempering ---
-                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-                    % Run Simulated Tempering
-                    if mod(itr, obj.tempSwap) == 0
-                        obj.temper = log(itr) / 0.9; % remove magic number
-                    end
-                    
-                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                    % --- Stepsize Annealing ---
-                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-                    % Do Stepsize Annealing         
-                    obj.avgGrads = (1 - obj.avgConst) .* abs(obj.grads) + obj.avgConst .* obj.avgGrads;
-                    obj.stepSize = obj.stepSize ./ (1 + obj.stepSizeConst .* obj.avgGrads);
-                    if obj.stepSize > obj.stepSizeMax
-                        obj.stepSize = obj.stepSizeMax;
-                    end
-    
-                    % Keep track of average gradient norm
-                    obj.gradNorm    = norm(obj.grads);
-                    obj.avgGradNorm = (1 - obj.avgConst) .* abs(obj.gradNorm) + obj.avgConst .* obj.avgGradNorm;
-    
-                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                    % --- Save Data for Analysis ---
-                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-                    
-                    % Fill analysis arrays
-                    obj.saveParams(:,itr)   = obj.param;
-                    obj.saveGrads(:,itr)    = obj.grads;
-                    obj.saveGradNorm(itr,1) = obj.gradNorm;
-                    obj.saveInvTemp(itr,1)  = obj.temper;
-                    obj.saveStepSize(:,itr) = obj.stepSize; 
-                    obj.saveObjectiveFunc(itr,1) = obj.cpe.J;
-    
+                    for np = 1:obj.numParticles
+
+                        % Do Langevin updates on all params
+                        obj.grads(:,np) = [obj.cpe{1,np}.dJ_beta.'; obj.cpe{1,np}.dJ_gamma.'; obj.cpe{1,np}.dJ_phi.'];               
+                        paramProp = obj.param(:,np) - obj.stepSize(:,np) .* obj.grads(:,np) + sqrt(2 * obj.stepSize(:,np) / obj.temper(1,np)) .* randn(obj.numParams, 1);     
+                       
+                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                        % --- Apply Metropolis step ---
+                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+                        % Run Metropolis Adjustment
+                        alpha = min(1, exp(-obj.temper * (obj.cpe{1,np}.evalObjectiveFunc(paramProp) - obj.cpe{1,np}.J)));
+                        if rand(1,1) <= alpha
+                            obj.param(:,np) = paramProp;
+                            obj.savebAccept(np,itr) = 1;
+                        end
+        
+                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                        % --- Simulated Tempering ---
+                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+                        % Run Simulated Tempering
+                        if mod(itr, obj.tempSwap) == 0
+                            obj.temper(1,np) = log(itr) / 0.7; % remove magic number
+                        end
+                        
+                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                        % --- Stepsize Annealing ---
+                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+                        % Do Stepsize Annealing         
+                        obj.avgGrads(:,np) = (1 - obj.avgConst) .* abs(obj.grads(:,np)) + obj.avgConst .* obj.avgGrads(:,np);
+                        obj.stepSize(:,np) = obj.stepSize(:,np) ./ (1 + obj.stepSizeConst .* obj.avgGrads(:,np));
+                        for npr = 1:obj.numParams
+                            if obj.stepSize(npr,np) > obj.stepSizeMax(npr,np)
+                                obj.stepSize(npr,np) = obj.stepSizeMax(npr,np);
+                            end
+                        end
+        
+                        % Keep track of average gradient norm
+                        obj.gradNorm(1,np)    = norm(obj.grads(:,np));
+                        obj.avgGradNorm(1,np) = (1 - obj.avgConst) .* abs(obj.gradNorm(1,np)) + obj.avgConst .* obj.avgGradNorm(1,np);
+
+                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                        % --- Save Data for Analysis ---
+                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+                        
+                        % Fill analysis arrays
+                        obj.saveParams(:,np,itr) = obj.param(:,np);
+                        obj.saveGrads(:,np,itr)  = obj.grads(:,np);
+                        obj.saveGradNorm(np,itr) = obj.gradNorm(1,np);
+                        obj.saveInvTemp(np,itr)  = obj.temper(1,np);
+                        obj.saveStepSize(:,np,itr)    = obj.stepSize(:,np); 
+                        obj.saveObjectiveFunc(np,itr) = obj.cpe{1,np}.J;
+                    end % end numParticles
+
                     % Update waitbar and message
                     if getappdata(wbar, 'canceling')
                         disp('Simulation cancelled!')
@@ -154,26 +182,44 @@ classdef classLangevinMonteCarlo < handle
                     if mod(itr, 10) == 0
                         waitbar(itr / obj.numIter);
                     end
+                end % end numIter
+
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                % --- Find the optimum parameter vector ---
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+                % Find "personal" best for each particle
+                for np = 1:obj.numParticles
+                    paramSet = obj.saveParams(:, np, obj.numIter-obj.numSamplesToUse+1:end); % choose parameters obtained in the last few iterations
+                    
+                    objectiveFuncValsForSamples = zeros(obj.numSamplesToUse, 1);
+                    for nind = 1:obj.numSamplesToUse
+                        objectiveFuncValsForSamples(nind, 1) = obj.cpe{1,np}.evalObjectiveFunc(paramSet(:, :, nind));
+                    end 
+
+                    [~, paramOptInd] = min(objectiveFuncValsForSamples);
+                    obj.paramOptPersonalBest(:,np) = paramSet(:, :, paramOptInd);
                 end
-    
-                % Find the optimum parameter vector
-                paramSet = obj.saveParams(:, obj.numIter - obj.numSamplesToUse:end);
-                objectiveFuncVals = zeros(obj.numSamplesToUse, 1);
-                for nind = 1:obj.numSamplesToUse
-                    objectiveFuncVals(nind, 1) = obj.cpe.evalObjectiveFunc(real(paramSet(:, nind)));
+
+                % Find the "collective" best param from the "personal"
+                % bests of all the particles
+                objectiveFuncVals = zeros(obj.numParticles, 1);
+                for np = 1:obj.numParticles
+                    objectiveFuncVals(np, 1) = obj.cpe{1,np}.evalObjectiveFunc(obj.paramOptPersonalBest(:,np));
                 end
-                [~, paramOptInd] = min(objectiveFuncVals);
-                obj.paramOpt = paramSet(:, paramOptInd);
+                [~, paramOptParticleInd]   = min(objectiveFuncVals);
+                obj.paramOptCollectiveBest = obj.paramOptPersonalBest(:, paramOptParticleInd);
+
     
                 % Finally, compute the scalar gains
-                obj.cpe = obj.cpe.compScalarGains(); % This should now take the optimum param from above
+                % obj.cpe = obj.cpe.compScalarGains(); % This should now take the optimum param from above
                 
                 delete(wbar);
                 disp('Simulation complete!');
 
             catch me
                 delete(wbar); % Close wait bar when simulation errors out
-                rethrow(me);
+                throw(me);
             end
         end
     end

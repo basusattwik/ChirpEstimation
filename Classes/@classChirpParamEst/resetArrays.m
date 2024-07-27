@@ -2,7 +2,6 @@ function obj = resetArrays(obj)
 %RESETARRAYS Summary of this function goes here
 %   Detailed explanation goes here
 
-obj.Pc  = zeros(obj.Nc, 1);
 obj.A   = zeros(obj.N, 1);
 obj.e   = zeros(obj.N, 1);
 obj.u   = zeros(obj.N, 1);

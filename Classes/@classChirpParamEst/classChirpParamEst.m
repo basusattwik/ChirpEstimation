@@ -92,6 +92,13 @@ classdef classChirpParamEst < handle
             obj.p = 1;
             obj.k = 1;
 
+            % Fill out Pc array and compute total phase params K
+            obj.Pc  = zeros(obj.Nc, 1);
+            for c = 1:obj.Nc
+                obj.Pc(c,1) = size(obj.phi{1,c}, 1);
+            end
+            obj.K = sum(obj.Pc);
+
             % Init chirp signals based on the settings file
             obj = obj.resetArrays();
             obj = obj.initChirpSignals();
