@@ -75,7 +75,7 @@ classdef classLangevinMonteCarlo < handle
             obj.saveObjectiveFunc = zeros(obj.numParticles, obj.numIter);
 
             % Init params and gradient
-            paramInit = [5, 2, 1.5, 40].';
+            paramInit = [5, 2, 1.5, 43].';
             obj.param = [repmat(paramInit, 1, obj.numParticles)];
             % obj.param = unifrnd(0, 50, obj.numParams, obj.numParticles);
             % 10*rand(obj.numParams, obj.numParticles); % what is a good init [5, 7, 5, 4, 0, 40, 0.5, 0, 65, 1].'; % 
