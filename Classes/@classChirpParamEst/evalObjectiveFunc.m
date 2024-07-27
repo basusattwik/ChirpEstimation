@@ -10,12 +10,12 @@ Pc = obj.Pc;
 ym = obj.ym;
 
 % Preallocate for speed
-beta  = zeros(1, obj.Nc); 
-gamma = zeros(1, obj.Nc);
-phi = cell(1, obj.Nc);
-A = zeros(obj.N, 1);
-e = zeros(obj.N, 1);
-H = zeros(obj.N, Nc);
+beta  = zeros(1, Nc); 
+gamma = zeros(1, Nc);
+phi   = cell(1, Nc);
+A     = zeros(N, 1);
+e     = zeros(N, 1);
+H     = zeros(N, Nc);
 
 % Avoiding divides
 oneOverFs = 1/fs;
@@ -37,7 +37,7 @@ for c = 1:Nc
     pvec = (0:P-1).';
     for n = 1:N % -- loop over number of samples
         % Get the amplitude envelope
-        A(n,1) = exp(-beta(1,c) * n * oneOverFs) * (1 - exp(-gamma(1,c) * n * oneOverFs));
+        A(n,1) = exp(-beta(1,c) * (n-1) * oneOverFs) * (1 - exp(-gamma(1,c) * (n-1) * oneOverFs));
     
         % Get the exponential polynomial phase sinusoid
         npvec  = ((n-1) * oneOverFs).^pvec; % vectors of powers of n/fs
@@ -51,7 +51,7 @@ end
 P  = H * (H' * H)^(-1) * H'; 
 Po = eye(size(P)) - P;
 
-% Cost function value
+% Objective function value
 J = real(ym' * Po * ym);
 
 end

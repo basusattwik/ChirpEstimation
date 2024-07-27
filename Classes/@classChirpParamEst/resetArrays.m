@@ -2,7 +2,6 @@ function obj = resetArrays(obj)
 %RESETARRAYS Summary of this function goes here
 %   Detailed explanation goes here
 
-obj.Pc  = zeros(obj.Nc, 1);
 obj.A   = zeros(obj.N, 1);
 obj.e   = zeros(obj.N, 1);
 obj.u   = zeros(obj.N, 1);
@@ -29,8 +28,8 @@ obj.Hhat     = zeros(obj.Nc, obj.N);
 obj.P        = zeros(obj.N, obj.N);
 obj.Po       = zeros(obj.N, obj.N);
 obj.dH_phi   = zeros(obj.N, obj.Nc, obj.K);
-obj.dH_beta  = zeros(obj.N, obj.Nc);
-obj.dH_gamma = zeros(obj.N, obj.Nc);
+obj.dH_beta  = zeros(obj.N, obj.Nc, obj.Nc);
+obj.dH_gamma = zeros(obj.N, obj.Nc, obj.Nc);
 obj.dJ_phi   = zeros(1, obj.K);
 obj.dJ_beta  = zeros(1, obj.Nc);
 obj.dJ_gamma = zeros(1, obj.Nc);

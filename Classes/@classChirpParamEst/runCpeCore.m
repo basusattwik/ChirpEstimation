@@ -18,8 +18,3 @@ obj = obj.compAllGradients();
 obj = obj.compObjectiveFunc();
 
 end
-
-% General comments:
-% compBasisSignals() is being run more times than necessary. Can be done
-% once and used in Basis, Project and Grads. But need to be careful about
-% the gamma part in grads.

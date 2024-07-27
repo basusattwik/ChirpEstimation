@@ -58,8 +58,8 @@ classdef classChirpParamEst < handle
 
         % Gradients
         dH_phi;   % Gradient of H wrt phi   (N x Nc x K)
-        dH_beta;  % Gradient of H wrt beta  (N x Nc)
-        dH_gamma; % Gradient of H wrt gamma (N x Nc)
+        dH_beta;  % Gradient of H wrt beta  (N x Nc x Nc)
+        dH_gamma; % Gradient of H wrt gamma (N x Nc x Nc)
         dJ_phi;   % Gradient of J wrt phi   (1 x K)
         dJ_beta;  % Gradient of J wrt beta  (1 x Nc)
         dJ_gamma; % Gradient of J wrt gamma (1 x Nc)
@@ -91,6 +91,13 @@ classdef classChirpParamEst < handle
             obj.c = 1;
             obj.p = 1;
             obj.k = 1;
+
+            % Fill out Pc array and compute total phase params K
+            obj.Pc  = zeros(obj.Nc, 1);
+            for c = 1:obj.Nc
+                obj.Pc(c,1) = size(obj.phi{1,c}, 1);
+            end
+            obj.K = sum(obj.Pc);
 
             % Init chirp signals based on the settings file
             obj = obj.resetArrays();

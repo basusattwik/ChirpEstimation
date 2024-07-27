@@ -79,7 +79,7 @@ function [DPTM, DP] = discretePolynomialTransform(s, M, T)
     % M is the order of the polynomial phase
     % T is the delay parameter
     
-    N = length(s);
+    N  = length(s);
     DP = s;  % Start with the first-order operator
 
     % Compute higher order DP operators recursively
@@ -103,7 +103,7 @@ function s = generatePolyPhaseSignal(N, M, A, coeff, delta)
     % delta is the sampling interval
     
     n = 0:N-1;  % Time index
-    phasePoly = zeros(1, N);
+    phasePoly = zeros(1,N);
     
     for m = 0:M
         phasePoly = phasePoly + coeff(m+1) * (n * delta).^m;
