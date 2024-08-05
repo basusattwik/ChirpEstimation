@@ -13,9 +13,6 @@ for c = 1:Nc  % -- loop over number of chirps
 
     for nind = 1:N % -- loop over number of samples
 
-        % Get the amplitude envelope
-        obj.Am(nind,c) = obj.alpha(1,c) * exp(-obj.beta(1,c) * (nind-1)/fs) * (1 - exp(-obj.gamma(1,c) * (nind-1)/fs));
-
         % Get the exponential polynomial phase sinusoid
         npvec = ((nind-1) / fs).^(0:P-1).'; % vectors of powers of n/fs
         obj.em(nind,c) = exp(2*pi*1j .* (obj.phi{:,c}.' * npvec));
@@ -23,11 +20,7 @@ for c = 1:Nc  % -- loop over number of chirps
     end % -- end loop over number of chirps
 end % -- end loop over number of samples
 
-if obj.bAmpEnv
-    obj.xm = obj.Am .* obj.em;
-else
-    obj.xm = obj.em;
-end
+obj.xm = obj.em;
 
 % Combined to form multicomponent signal
 obj.ym = sum(obj.xm, 2);

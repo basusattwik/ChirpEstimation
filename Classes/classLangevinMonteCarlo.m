@@ -34,7 +34,7 @@ classdef classLangevinMonteCarlo < handle
         saveParams;
         saveGrads;
         saveGradNorm;
-        saveInvTemp;
+        saveTemp;
         savebAccept;
         saveStepSize;
     end
@@ -47,9 +47,9 @@ classdef classLangevinMonteCarlo < handle
             obj.numParams = setup.numParams;
 
             % Set tuning for hyperparams
-            obj.numIter  = tuning.numIter;
-            obj.tempSwap = tuning.tempSwap;
-            obj.avgConst = tuning.avgConst;
+            obj.numIter         = tuning.numIter;
+            obj.tempSwap        = tuning.tempSwap;
+            obj.avgConst        = tuning.avgConst;
             obj.numSamplesToUse = tuning.numSamplesToUse;
             obj.stepSizeConst   = tuning.stepSizeConst;
             obj.numParticles    = tuning.numParticles;
@@ -58,7 +58,7 @@ classdef classLangevinMonteCarlo < handle
             obj.stepSizeMax = zeros(obj.numParams, obj.numParticles);
             obj.temper      = zeros(1, obj.numParticles);
             for np = 1:obj.numParticles
-                obj.temper(1,np)   = tuning.initInvTemp;
+                obj.temper(1,np)   = tuning.initTemp;
                 obj.stepSize(:,np) = tuning.stepSize;
                 for npr = 1:obj.numParams
                     obj.stepSizeMax(npr,np) = tuning.stepSizeMax;
@@ -69,17 +69,21 @@ classdef classLangevinMonteCarlo < handle
             obj.saveParams   = zeros(obj.numParams, obj.numParticles, obj.numIter);
             obj.saveGrads    = zeros(obj.numParams, obj.numParticles, obj.numIter);
             obj.saveGradNorm = zeros(obj.numParticles, obj.numIter);
-            obj.saveInvTemp  = zeros(obj.numParticles, obj.numIter);
+            obj.saveTemp     = zeros(obj.numParticles, obj.numIter);
             obj.savebAccept  = zeros(obj.numParticles, obj.numIter);
             obj.saveStepSize = zeros(obj.numParams, obj.numParticles, obj.numIter);
             obj.saveObjectiveFunc = zeros(obj.numParticles, obj.numIter);
 
             % Init params and gradient
-            paramInit = [5, 2, 1.5, 43].';
-            obj.param = [repmat(paramInit, 1, obj.numParticles)];
-            % obj.param = unifrnd(0, 50, obj.numParams, obj.numParticles);
+            % paramInit = 0;
+            % for j = 1:obj.numParticles
+            %     obj.param(:, j) = [0; unifrnd(20, 50, 1, 1)];
+            % end
+            paramInit       = [0, 23].';
+            obj.param       = [repmat(paramInit, 1, obj.numParticles)];
+            % obj.param = unifrnd(0, 15, obj.numParams, obj.numParticles);
             % 10*rand(obj.numParams, obj.numParticles); % what is a good init [5, 7, 5, 4, 0, 40, 0.5, 0, 65, 1].'; % 
-            obj.grads = zeros(obj.numParams, obj.numParticles); 
+            obj.grads       = zeros(obj.numParams, obj.numParticles); 
             obj.avgGrads    = zeros(obj.numParams, obj.numParticles);
             obj.avgGradNorm = zeros(1, obj.numParticles);
             obj.gradNorm    = zeros(1, obj.numParticles);
@@ -126,7 +130,7 @@ classdef classLangevinMonteCarlo < handle
         
                         % Run Simulated Tempering
                         if mod(itr, obj.tempSwap) == 0
-                            obj.temper(1,np) = log(itr) / 0.7; % remove magic number
+                            obj.temper(1,np) = 0.7 / log(1 + (itr)); % remove magic number
                         end
                         
                         %%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -136,8 +140,9 @@ classdef classLangevinMonteCarlo < handle
                         %%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
                         % Do Stepsize Annealing         
-                        obj.avgGrads(:,np) = (1 - obj.avgConst) .* abs(obj.grads(:,np)) + obj.avgConst .* obj.avgGrads(:,np);
-                        obj.stepSize(:,np) = obj.stepSize(:,np) ./ (1 + obj.stepSizeConst .* obj.avgGrads(:,np));
+                        obj.avgGrads(:,np) = obj.avgConst .* obj.grads(:,np) + (1-obj.avgConst) .* obj.avgGrads(:,np);
+                        % obj.stepSize(:,np) = obj.stepSize(:,np) ./ (1 + obj.stepSizeConst .* obj.avgGrads(:,np).^2);
+                        obj.stepSize(:,np) = [0; 0.09] ./ (1 + obj.stepSizeConst .* obj.avgGrads(:,np).^2);
                         for npr = 1:obj.numParams
                             if obj.stepSize(npr,np) > obj.stepSizeMax(npr,np)
                                 obj.stepSize(npr,np) = obj.stepSizeMax(npr,np);
@@ -146,17 +151,18 @@ classdef classLangevinMonteCarlo < handle
         
                         % Keep track of average gradient norm
                         obj.gradNorm(1,np)    = norm(obj.grads(:,np))^2;
-                        obj.avgGradNorm(1,np) = (1 - obj.avgConst) .* abs(obj.gradNorm(1,np)) + obj.avgConst .* obj.avgGradNorm(1,np);
+                        obj.avgGradNorm(1,np) = obj.avgConst .* abs(obj.gradNorm(1,np)) + (1-obj.avgConst) .* obj.avgGradNorm(1,np);
 
                         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                         %
                         % --- Langevin Monte Carlo ---
                         %
                         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+                        
                         % Do Langevin updates on all params
-                        obj.grads(:,np) = [obj.cpe{1,np}.dJ_beta.'; obj.cpe{1,np}.dJ_gamma.'; obj.cpe{1,np}.dJ_phi.'];               
-                        paramProp = obj.param(:,np) - obj.stepSize(:,np) .* obj.grads(:,np) + sqrt(2 * obj.stepSize(:,np) ./ obj.temper(1,np)) .* randn(obj.numParams, 1);     
+                        obj.grads(:,np) = obj.cpe{1,np}.dJ_phi.'; 
+                        paramProp = obj.param(:,np) - obj.stepSize(:,np) .* obj.grads(:,np) + ...
+                                             sqrt(2 * obj.stepSize(:,np) .* obj.temper(1,np)) .* randn(obj.numParams, 1); 
                        
                         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                         %
@@ -165,7 +171,7 @@ classdef classLangevinMonteCarlo < handle
                         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
                         % Run Metropolis Adjustment
-                        alpha = min(1, exp(-obj.temper * (obj.cpe{1,np}.evalObjectiveFunc(paramProp) - obj.cpe{1,np}.J)));
+                        alpha = min(1, exp(-(1/obj.temper(1,np)) * (obj.cpe{1,np}.evalObjectiveFunc(paramProp) - obj.cpe{1,np}.J)));
                         if rand(1,1) <= alpha
                             obj.param(:,np) = paramProp;
                             obj.savebAccept(np,itr) = 1;
@@ -178,10 +184,10 @@ classdef classLangevinMonteCarlo < handle
                         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
                         
                         % Fill analysis arrays
-                        obj.saveParams(:,np,itr) = obj.param(:,np);
-                        obj.saveGrads(:,np,itr)  = obj.grads(:,np);
-                        obj.saveGradNorm(np,itr) = obj.gradNorm(1,np);
-                        obj.saveInvTemp(np,itr)  = obj.temper(1,np);
+                        obj.saveParams(:,np,itr)      = obj.param(:,np);
+                        obj.saveGrads(:,np,itr)       = obj.grads(:,np);
+                        obj.saveGradNorm(np,itr)      = obj.gradNorm(1,np);
+                        obj.saveTemp(np,itr)          = obj.temper(1,np);
                         obj.saveStepSize(:,np,itr)    = obj.stepSize(:,np); 
                         obj.saveObjectiveFunc(np,itr) = obj.cpe{1,np}.J;
 
@@ -202,6 +208,9 @@ classdef classLangevinMonteCarlo < handle
                 % --- Find the optimum parameter vector ---
                 %
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+                YY = obj.saveGrads;
+                XX = obj.saveParams;
 
                 % Find "personal" best for each particle
                 for np = 1:obj.numParticles

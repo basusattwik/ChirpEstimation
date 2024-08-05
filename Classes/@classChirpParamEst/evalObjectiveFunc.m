@@ -10,10 +10,7 @@ Pc = obj.Pc;
 ym = obj.ym;
 
 % Preallocate for speed
-beta  = zeros(1, Nc); 
-gamma = zeros(1, Nc);
 phi   = cell(1, Nc);
-A     = zeros(N, 1);
 e     = zeros(N, 1);
 H     = zeros(N, Nc);
 
@@ -21,11 +18,7 @@ H     = zeros(N, Nc);
 oneOverFs = 1/fs;
 
 % Extract current params into data structs
-for c = 1:Nc
-    beta(1,c)  = params(c,1);
-    gamma(1,c) = params(c + Nc,1);
-end
-startInd = 2*Nc + 1;
+startInd = 1;
 for c = 1:Nc
     phi{1,c} = params(startInd:startInd+Pc(c)-1);
     startInd = startInd + Pc(c);
@@ -36,14 +29,12 @@ for c = 1:Nc
     P = size(phi{1,c},1);
     pvec = (0:P-1).';
     for n = 1:N % -- loop over number of samples
-        % Get the amplitude envelope
-        A(n,1) = exp(-beta(1,c) * (n-1) * oneOverFs) * (1 - exp(-gamma(1,c) * (n-1) * oneOverFs));
-    
+
         % Get the exponential polynomial phase sinusoid
         npvec  = ((n-1) * oneOverFs).^pvec; % vectors of powers of n/fs
         e(n,1) = exp(2*pi*1j .* (phi{1,c}.' * npvec));
     end
-    x = A .* e;
+    x = e;
     H(:,c) = x;
 end
 

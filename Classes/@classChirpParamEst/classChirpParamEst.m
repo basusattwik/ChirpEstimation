@@ -9,8 +9,6 @@ classdef classChirpParamEst < handle
         Td = 1;    % Duration (sec)
         Nc = 2;    % Number of Chirps
         N  = 1000; % Total number of samples (fs * Td)
-        bAmpGamma = false;
-        bAmpEnv   = true;
 
         % Indexing
         n;        % Sample indexing vector from 0:N-1
@@ -21,7 +19,6 @@ classdef classChirpParamEst < handle
         Pc;       % Array containing number of polynomial phase coeff in each chirp
 
         % Signals for iteration steps
-        A;        % Chirp amplitude envelopes (N x Nc);
         e;        % Chirps without amplitude envelope (N x Nc)
         u;        % Chirps with amplitude envelepe (N x Nc)
         x;        % Clean chirp (N x 1)
@@ -29,7 +26,6 @@ classdef classChirpParamEst < handle
         w;        % White Gaussian noise at specified snr (N x 1)
 
         % Generated signals
-        Am;       % Chirp amplitude envelopes (N x Nc);
         em;       % Chirps without amplitude envelope (N x Nc)
         um;       % Chirps with amplitude envelepe (N x Nc)
         xm;       % Clean mixture of chirps (N x 1)
@@ -37,18 +33,14 @@ classdef classChirpParamEst < handle
         wm;       % White Gaussian noise at specified snr (N x 1)
 
         % Chirp properties (settings)
-        env;      % Amplitude env for each chirp (N x Nc)
+        % env;      % Amplitude env for each chirp (N x Nc)
         alpha;    % Scalar gains (1 x Nc)
-        beta;     % Amplitude envelope parameter (1 x Nc)
-        gamma;    % The other amplitude envelope parameter (1 x Nc)
         phi;      % Phase polynomial parameters (1 x Nc but cell array)
         snr;      % Signal-to-Noise ratio in dB
 
         % Terms used in iterative estimation
         J;        % Objective function value (scalar)
         alphaEst; % Scalar gains (1 x Nc)
-        betaEst;  % Amplitude envelope parameter (1 x Nc)
-        gammaEst; % The other amplitude envelope parameter (1 x Nc)
         phiEst;   % Phase polynomial parameters array (1 x K)
         phiEstCell; % Phase polynomial parameters in cell (1 x Nc)
         H;        % Basis matrix (N x Nc)
@@ -58,11 +50,7 @@ classdef classChirpParamEst < handle
 
         % Gradients
         dH_phi;   % Gradient of H wrt phi   (N x Nc x K)
-        dH_beta;  % Gradient of H wrt beta  (N x Nc x Nc)
-        dH_gamma; % Gradient of H wrt gamma (N x Nc x Nc)
         dJ_phi;   % Gradient of J wrt phi   (1 x K)
-        dJ_beta;  % Gradient of J wrt beta  (1 x Nc)
-        dJ_gamma; % Gradient of J wrt gamma (1 x Nc)
         
     end
 
@@ -76,15 +64,8 @@ classdef classChirpParamEst < handle
             obj.Td    = cpeSetting.Td;
             obj.Nc    = cpeSetting.Nc;
             obj.alpha = cpeSetting.alpha;
-            obj.beta  = cpeSetting.beta;
-            obj.gamma = cpeSetting.gamma;
             obj.phi   = cpeSetting.phi;
             obj.snr   = cpeSetting.snr;
-
-            % Error checking basics
-            if size(obj.phi,2) ~= obj.Nc || size(obj.alpha,2) ~= obj.Nc || size(obj.beta,2) ~= obj.Nc || size(obj.gamma,2) ~= obj.Nc
-                error('Number of chirps does not match number of parameters provided');
-            end
             
             obj.N = obj.fs * obj.Td;
             obj.n = (0:obj.N-1).';
