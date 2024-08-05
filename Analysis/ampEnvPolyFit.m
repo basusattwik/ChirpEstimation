@@ -1,6 +1,6 @@
 
 clearvars
-close all
+% close all
 
 fx = @ (x, b, g) exp(-b * x) .* (1 - exp(-g * x));
 
@@ -13,10 +13,11 @@ g  = 20;
 
 f = fx(t,b,g);
 
-c = polyfit(t, f, 2);
+c = polyfit(t, f, 10);
 p = polyval(c, t);
 
 figure('WindowStyle','docked')
 
 plot(t, f); hold on;
 plot(t, p);
+

@@ -4,7 +4,7 @@ clearvars
 
 %% Create a chirp
 
-fs = 1000;
+fs = 100;
 Td = 1;
 Nc = 2; 
 
@@ -71,6 +71,7 @@ end
 save("JTensor.mat", "J");
 
 J = real(J);
+
 %% Plots
 
 [F,M] = meshgrid(f,m);
@@ -100,43 +101,60 @@ nexttile
     grid on; grid minor;
 
 nexttile
-    surf(squeeze(J(f0_set, m0_set, c1_set, :, :)), 'EdgeColor', 'interp', 'FaceColor', 'interp');
-    xlabel('Delta');
-    ylabel('Beta');
+    surf(ac2, ac3, squeeze(J(f0_set, m0_set, c1_set, :, :)), 'EdgeColor', 'interp', 'FaceColor', 'interp');
+    xlabel('Coeff 2');
+    ylabel('Coeff 3');
     zlabel('Objective Function');
-    title('Fixed frequency and chirp rate');
+    title('Fixed frequency, chirp rate and coeff 1');
     grid on; grid minor;
 
-% nexttile
-%     surf(m, d, squeeze(J(f0_set, :, c1_set, :)).', 'EdgeColor', 'interp', 'FaceColor', 'interp');
-%     xlabel('Frequency (Hz)');
-%     ylabel('Gamma');
-%     zlabel('Objective Function');
-%     title('Fixed frequency and beta');
-%     grid on; grid minor;
-% 
-% nexttile
-%     surf(f, b, squeeze(J(:, m0_set, :, c2_set)).', 'EdgeColor', 'interp', 'FaceColor', 'interp');
-%     xlabel('Frequency (Hz)');
-%     ylabel('Beta');
-%     zlabel('Objective Function');
-%     title('Fixed chirp rate and gamma');
-%     grid on; grid minor;
-% 
-% nexttile
-%     contour(b, d, squeeze(J(f0_set, m0_set, :, :)).')
-%     xlabel('Beta');
-%     ylabel('Gamma');
-%     title('Fixed frequency and chirp rate contour');
-%     grid on; grid minor;
-% 
-% nexttile
-%     contour(f, m, squeeze(J(:, :, c1_set, c2_set)).')
-%     xlabel('Chirp Rate (Hz/s)');
-%     ylabel('Frequency (Hz)');
-%     title('Fixed beta and gamma contour');
-%     grid on; grid minor;
+nexttile
+    surf(ac1, ac3, squeeze(J(f0_set, m0_set, :, c2_set, :)), 'EdgeColor', 'interp', 'FaceColor', 'interp');
+    xlabel('Coeff 1');
+    ylabel('Coeff 3');
+    zlabel('Objective Function');
+    title('Fixed frequency, chirp rate and coeff 2');
+    grid on; grid minor;
+    
+nexttile
+    surf(ac1, ac2, squeeze(J(f0_set, m0_set, :, :, c3_set)), 'EdgeColor', 'interp', 'FaceColor', 'interp');
+    xlabel('Coeff 1');
+    ylabel('Coeff 2');
+    zlabel('Objective Function');
+    title('Fixed frequency, chirp rate and coeff 3');
+    grid on; grid minor;
 
+nexttile
+    surf(m, ac2, squeeze(J(f0_set, :, c1_set, :, c3_set)).', 'EdgeColor', 'interp', 'FaceColor', 'interp');
+    xlabel('Chirp rate (Hz/s)');
+    ylabel('Coeff 2');
+    zlabel('Objective Function');
+    title('Fixed frequency, coeff 1 and coeff 3');
+    grid on; grid minor;
+
+nexttile
+    surf(m, ac1, squeeze(J(f0_set, :, :, c2_set, c3_set)).', 'EdgeColor', 'interp', 'FaceColor', 'interp');
+    xlabel('Chirp Rate (Hz/s)');
+    ylabel('Coeff 1');
+    zlabel('Objective Function');
+    title('Fixed frequency, coeff 2 and coeff 3');
+    grid on; grid minor;
+
+nexttile
+    surf(m, ac3, squeeze(J(f0_set, :, c1_set, c2_set, :)).', 'EdgeColor', 'interp', 'FaceColor', 'interp');
+    xlabel('Chirp Rate (Hz/s)');
+    ylabel('Coeff 3');
+    zlabel('Objective Function');
+    title('Fixed frequency, coeff 1 and coeff 2');
+    grid on; grid minor;
+
+nexttile
+    surf(f, ac3, squeeze(J(:, m0_set, c1_set, c2_set, :)).', 'EdgeColor', 'interp', 'FaceColor', 'interp');
+    xlabel('Frequency (Hz)');
+    ylabel('Coeff 3');
+    zlabel('Objective Function');
+    title('Fixed chirp rate, coeff 1 and coeff 2');
+    grid on; grid minor;
 %% Helpers
 
 function y = getChirp(fs, N, p0, f0, m0)
@@ -165,12 +183,6 @@ function A = getEnvFunc(fs, N, c)
     
     end 
 end
-
-% function pc = doPolyFit(x, Fx, K)
-% 
-% pc = polyfit(x, Fx, K);
-% 
-% end
 
 function ym = addGaussianNoise(xm, snr)
 %UNTITLED3 Summary of this function goes here

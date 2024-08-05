@@ -1,4 +1,4 @@
-clc
+zooclc
 close all
 clearvars
 
