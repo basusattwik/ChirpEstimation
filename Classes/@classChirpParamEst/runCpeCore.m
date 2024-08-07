@@ -69,7 +69,7 @@ for c = 1:Nc
 
         % Get the gradient of H wrt phi
         obj.dH_phi(:,c,k) = 2*pi*1j * (obj.n .* oneOverFs).^p .* obj.H(:,c);
-        obj.dJ_phi(1,k)   = -2 * real(obj.ym' * obj.Po * obj.dH_phi(:,:,k) * ((obj.H' * obj.H)^(-1) * obj.H') * obj.ym);     
+        obj.dJ_phi(1,k)   = -2 * real(obj.ym' * obj.Po * obj.dH_phi(:,:,k) * (pinv(obj.H' * obj.H) * obj.H') * obj.ym);     
     end
 
 end

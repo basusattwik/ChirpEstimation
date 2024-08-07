@@ -10,9 +10,9 @@ Pc = obj.Pc;
 ym = obj.ym;
 
 % Preallocate for speed
-phi   = cell(1, Nc);
-e     = zeros(N, 1);
-H     = zeros(N, Nc);
+phi = cell(1, Nc);
+e   = zeros(N, 1);
+H   = zeros(N, Nc);
 
 % Avoiding divides
 oneOverFs = 1/fs;
@@ -39,6 +39,6 @@ for c = 1:Nc
 end
 
 % Get the projection matrix and the orthogonal projection matrix
-obj.alpha  = (H' * H)^(-1) * H' * obj.ym; 
+obj.alpha  = (H' * H)^(-1) * H' * ym; 
 
 end
