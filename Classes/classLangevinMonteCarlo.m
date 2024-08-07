@@ -29,8 +29,6 @@ classdef classLangevinMonteCarlo < handle
         param;
         grads;
         objectiveJ; 
-        paramOptPersonalBest; % Optimum/Almost-optimum parameters
-        paramOptCollectiveBest;
         gradNorm;
         avgGradNorm;
         avgGrads; % This is a vector NumParam x 1
@@ -57,7 +55,6 @@ classdef classLangevinMonteCarlo < handle
 
             % Set tuning for hyperparams
             obj.stepSizeConst = tuning.stepSizeConst;
-            obj.initTemp      = tuning.initTemp;
             obj.tempConst     = tuning.tempConst;
             obj.avgConst      = tuning.avgConst;
             obj.numParticles  = tuning.numParticles;
@@ -66,12 +63,12 @@ classdef classLangevinMonteCarlo < handle
             obj.noiseVarInit  = tuning.noiseVarInit;
             obj.noiseVarFinal = tuning.noiseVarFinal; 
 
-            obj.stepSize    = zeros(obj.numParams, obj.numParticles);
-            obj.stepSizeMax = zeros(obj.numParams, obj.numParticles);
-            obj.temper      = zeros(1, obj.numParticles);
+            obj.stepSizeInit = zeros(obj.numParams, obj.numParticles);
+            obj.stepSize     = zeros(obj.numParams, obj.numParticles);
+            obj.stepSizeMax  = zeros(obj.numParams, obj.numParticles);
+            obj.temper       = zeros(1, obj.numIterNoise);
 
             for np = 1:obj.numParticles
-                obj.temper(1,np) = tuning.initTemp; % ToDo: use repmat
                 obj.stepSizeInit(:,np) = tuning.stepSize;
                 for npr = 1:obj.numParams
                     obj.stepSizeMax(npr,np) = tuning.stepSizeMax;
@@ -86,23 +83,21 @@ classdef classLangevinMonteCarlo < handle
                 obj.noiseVar(1,ni) = obj.noiseVarInit / (obj.noiseVarRatio)^(ni-1);
             end
 
-            % Init params and gradient
+            % Init state params and gradients
             obj.param                  = unifrnd(0, 50, obj.numParams, obj.numParticles);
             obj.grads                  = zeros(obj.numParams, obj.numParticles); 
             obj.avgGrads               = zeros(obj.numParams, obj.numParticles);
             obj.avgGradNorm            = zeros(1, obj.numParticles);
             obj.gradNorm               = zeros(1, obj.numParticles);
-            obj.paramOptPersonalBest   = zeros(obj.numParams, obj.numParticles);
-            obj.paramOptCollectiveBest = zeros(obj.numParams, 1);
 
-            % Setup analysis buffers
+            % Preallocate arrays to store state data for later analysis
             obj.saveParams   = zeros(obj.numParams,    obj.numParticles, obj.numIterLmc,   obj.numIterNoise);
             obj.saveGrads    = zeros(obj.numParams,    obj.numParticles, obj.numIterLmc,   obj.numIterNoise);
             obj.saveStepSize = zeros(obj.numParams,    obj.numIterLmc,   obj.numParticles, obj.numIterNoise);
             obj.saveGradNorm = zeros(obj.numParticles, obj.numIterLmc,   obj.numIterNoise);
-            obj.saveTemp     = zeros(obj.numParticles, obj.numIterLmc,   obj.numIterNoise);
             obj.savebAccept  = zeros(obj.numParticles, obj.numIterLmc,   obj.numIterNoise);
             obj.saveObjFunc  = zeros(obj.numParticles, obj.numIterLmc,   obj.numIterNoise);
+            obj.saveTemp     = zeros(1, obj.numIterNoise);
 
             %  Call constructor of cpe class. Initialize several instances
             %  of the class... one for each particle
@@ -148,8 +143,9 @@ classdef classLangevinMonteCarlo < handle
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
                             % Get all the gradients
-                            obj.cpe{1,pind} = obj.cpe{1,pind}.runCpeCore(obj.param(:,pind)); % This gives the gradients wrt all params for all particles
-                            
+                            obj.cpe{1,pind}   = obj.cpe{1,pind}.runCpeCore(obj.param(:,pind)); % This gives the gradients wrt all params for all particles
+                            obj.grads(:,pind) = obj.cpe{1,pind}.dJ_phi.'; 
+
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%
                             %                          %
                             % --- Stepsize Annealing ---
@@ -160,7 +156,7 @@ classdef classLangevinMonteCarlo < handle
                             obj.avgGrads(:,pind) = obj.avgConst .* obj.grads(:,pind) + (1 - obj.avgConst) .* obj.avgGrads(:,pind);
     
                             % Update stepsize
-                            obj.stepSize(:,pind) = stepSizeNum ./ (1 + obj.stepSizeConst .* obj.avgGrads(:,pind).^2);
+                            obj.stepSize(:,pind) = stepSizeNum(:,pind) ./ (1 + obj.stepSizeConst .* obj.avgGrads(:,pind).^2);
                             
                             % Check if stepsize exceeds limits
                             for npr = 1:obj.numParams
@@ -178,9 +174,7 @@ classdef classLangevinMonteCarlo < handle
                             % --- Metropolis Adjusted Langevin Monte Carlo ---
                             %
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                            
-                            % Get gradients from the CPE class 
-                            obj.grads(:,pind) = obj.cpe{1,pind}.dJ_phi.'; 
+                           
     
                             % Do Langevin updates on all params to get a new proposed point
                             paramProp = obj.param(:,pind) - obj.stepSize(:,pind) .* obj.grads(:,pind) + ...
@@ -192,7 +186,7 @@ classdef classLangevinMonteCarlo < handle
     
                             if rand(1,1) <= alpha
                                 obj.param(:,pind) = paramProp;
-                                obj.savebAccept(pind, tind, nind) = 1;
+                                obj.savebAccept(pind,tind,nind) = 1;
                             end
 
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -202,15 +196,30 @@ classdef classLangevinMonteCarlo < handle
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
                             
                             % Fill analysis arrays
-                            obj.saveParams(:,pind, tind, nind)   = obj.param(:,pind);
-                            obj.saveGrads(:,pind,  tind, nind)   = obj.grads(:,pind);
-                            obj.saveGradNorm(pind, tind, nind)   = obj.gradNorm(1,pind);
-                            obj.saveTemp(pind, nind)             = obj.temper(1,pind);
-                            obj.saveStepSize(:,pind, tind, nind) = obj.stepSize(:,pind); 
-                            obj.saveObjFunc(pind, tind, nind)    = obj.cpe{1,pind}.J;
+                            obj.saveParams(:,pind, tind, nind) = obj.param(:,pind);
+                            obj.saveGrads(:, pind, tind, nind) = obj.grads(:,pind);
+                            obj.saveStepSize(:,pind,tind,nind) = obj.stepSize(:,pind); 
+                            obj.saveGradNorm(pind, tind, nind) = obj.gradNorm(1,pind);
+                            obj.saveObjFunc(pind,  tind, nind) = obj.cpe{1,pind}.J;
 
-                           % Increment iteration count for waitbar
-                           iterCount = iterCount + 1;
+
+                            %%%%%%%%%%%%%%%%%
+                            %
+                            % --- Waitbar ---
+                            %
+                            %%%%%%%%%%%%%%%%%
+
+                            % Increment iteration count for waitbar
+                            iterCount = iterCount + 1;
+
+                            % Update waitbar and message
+                            if getappdata(wbar, 'canceling')
+                                disp('Simulation cancelled!')
+                                break
+                            end    
+                            if mod(iterCount, 10) == 0
+                                waitbar(iterCount / totalNumIter);
+                            end
 
                         end % end numParticles
 
@@ -228,16 +237,10 @@ classdef classLangevinMonteCarlo < handle
                         obj.param(:,pind) = obj.saveParams(:,pind, minObjLmcInd, nind); % This is the starting point for the next round of LMC updates
                     end
 
-                    % Update waitbar and message
-                    if getappdata(wbar, 'canceling')
-                        disp('Simulation cancelled!')
-                        break
-                    end    
-                    if mod(iterCount, 10) == 0
-                        waitbar(nind / totalNumIter);
-                    end
-
                 end % end numIterNoise
+
+                % Save temperature
+                obj.saveTemp(1,nind) = obj.temper(1,nind);
 
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 % 
@@ -247,15 +250,17 @@ classdef classLangevinMonteCarlo < handle
 
                 objFuncVals = zeros(obj.numParticles, 1);
                 for pind = 1:obj.numParticles
-                    objFuncVals(np, 1) = obj.cpe{1,np}.evalObjectiveFunc(obj.param(:,pind));
+                    objFuncVals(pind, 1) = obj.cpe{1,pind}.evalObjectiveFunc(obj.param(:,pind));
                 end
 
                 [~, minObjFuncInd] = min(objFuncVals);
-                obj.optParam       = obj.param(:, minObjFuncInd);
+                obj.optParam = obj.param(:, minObjFuncInd);
+                disp(obj.optParam)
 
-                % Finally, compute the scalar gains
-                obj.cpe = obj.cpe.compScalarGains(obj.optParam); 
+                % Finally, compute the scalar gains for CPE
+                obj.cpe{1,minObjFuncInd} = obj.cpe{1,minObjFuncInd}.compScalarGains(obj.optParam); 
                 
+                % Housekeeping!
                 delete(wbar);
                 disp('Simulation complete!');
 

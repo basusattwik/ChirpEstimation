@@ -101,7 +101,7 @@ classdef classChirpParamEst < handle
         obj = compBasisMatrix(obj);
         obj = compProjMatrix(obj);
         obj = compAllGradients(obj);
-        obj = compScalarGains(obj);
+        obj = compScalarGains(obj, params);
 
         % The process function
         obj = runCpeCore(obj, params);
