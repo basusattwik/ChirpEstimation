@@ -27,6 +27,7 @@ classdef classLangevinMonteCarlo < handle
         % States
         temper;
         param;
+        initParam;
         grads;
         objectiveJ; 
         gradNorm;
@@ -69,10 +70,10 @@ classdef classLangevinMonteCarlo < handle
             obj.stepSizeMax  = zeros(obj.numParams, obj.numParticles);
             obj.temper       = zeros(1, 1);
 
-            for np = 1:obj.numParticles
-                obj.stepSizeInit(:,np) = tuning.stepSize;
+            for pind = 1:obj.numParticles
+                obj.stepSizeInit(:,pind) = tuning.stepSize;
                 for npr = 1:obj.numParams
-                    obj.stepSizeMax(npr,np) = tuning.stepSizeMax;
+                    obj.stepSizeMax(npr,pind) = tuning.stepSizeMax;
                 end
             end
 
@@ -85,11 +86,13 @@ classdef classLangevinMonteCarlo < handle
             end
 
             % Init state params and gradients
-            obj.param       = unifrnd(0, 50, obj.numParams, obj.numParticles);
+            obj.param       = unifrnd(10, 60, obj.numParams, obj.numParticles);
             obj.grads       = zeros(obj.numParams, obj.numParticles); 
             obj.avgGrads    = zeros(obj.numParams, obj.numParticles);
             obj.avgGradNorm = zeros(1, obj.numParticles);
             obj.gradNorm    = zeros(1, obj.numParticles);
+
+            obj.initParam = obj.param; % just store this for use during analysis
 
             % Preallocate arrays to store state data for later analysis
             obj.saveParams      = zeros(obj.numParams,    obj.numParticles, obj.numIterLmc,   obj.numIterNoise);
@@ -104,8 +107,8 @@ classdef classLangevinMonteCarlo < handle
             %  Call constructor of cpe class. Initialize several instances
             %  of the class... one for each particle
             obj.cpe = cell(1,obj.numParticles);
-            for np = 1:obj.numParticles
-                obj.cpe{1,np} = classChirpParamEst(setup);
+            for pind = 1:obj.numParticles
+                obj.cpe{1,pind} = classChirpParamEst(setup);
             end
         end
 
@@ -135,7 +138,6 @@ classdef classLangevinMonteCarlo < handle
                     stepSizeNum = obj.stepSizeInit .* (obj.noiseVar(1, nind) / obj.noiseVarFinal)^2;
 
                     for tind = 1:obj.numIterLmc 
-
                         for pind = 1:obj.numParticles 
 
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -183,7 +185,7 @@ classdef classLangevinMonteCarlo < handle
                                                             obj.noiseVar(1, nind) .* randn(obj.numParams,1);                
             
                             % Run Metropolis Adjustment
-                            alpha = min(1, exp(-(obj.temper) * (obj.cpe{1,pind}.evalObjectiveFunc(paramProp) - obj.cpe{1,pind}.J)));
+                            alpha = min(1, exp(-obj.temper * (obj.cpe{1,pind}.evalObjectiveFunc(paramProp) - obj.cpe{1,pind}.J)));
                             if rand(1,1) <= alpha
                                 obj.param(:,pind) = paramProp;
                                 obj.savebAccept(pind,tind,nind) = 1;
@@ -196,12 +198,12 @@ classdef classLangevinMonteCarlo < handle
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
                             
                             % Fill analysis arrays
-                            obj.saveParams(:,pind, tind, nind) = obj.param(:,pind);
-                            obj.saveGrads(:, pind, tind, nind) = obj.grads(:,pind);
-                            obj.saveStepSize(:,pind,tind,nind) = obj.stepSize(:,pind); 
-                            obj.saveGradNorm(pind, tind, nind) = obj.gradNorm(1,pind);
+                            obj.saveParams(:,pind, tind, nind)    = obj.param(:,pind);
+                            obj.saveGrads(:, pind, tind, nind)    = obj.grads(:,pind);
+                            obj.saveStepSize(:,pind,tind,nind)    = obj.stepSize(:,pind); 
+                            obj.saveGradNorm(pind, tind, nind)    = obj.gradNorm(1,pind);
                             obj.saveAvgGradNorm(pind, tind, nind) = obj.avgGradNorm(1,pind);
-                            obj.saveObjFunc(pind, tind, nind) = obj.cpe{1,pind}.J;
+                            obj.saveObjFunc(pind, tind, nind)     = obj.cpe{1,pind}.J;
 
                             %%%%%%%%%%%%%%%%%%%
                             %                 %
@@ -223,7 +225,6 @@ classdef classLangevinMonteCarlo < handle
                             end
 
                         end % end numParticles
-
                     end % end numIterLmc
 
                     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
