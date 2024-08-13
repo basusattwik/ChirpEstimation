@@ -10,7 +10,7 @@ clearvars
 %% Create a chirp
 
 fs = 200;
-Td = 1;
+Td = 0.25;
 Nc = 1; 
 
 N = Td * fs;
@@ -44,20 +44,20 @@ end
 
 Jcw = filter(w, 1, J);
 dJcw = filter(w, 1, dJ);
-
-figure(1)
-plot(f, Jcw); 
-hold on;
-plot(f, J)
-
-figure(2)
-plot(f, dJcw); 
-hold on;
-plot(f, dJcw)
+% 
+% figure(1)
+% plot(f, Jcw); 
+% hold on;
+% plot(f, J)
+% 
+% figure(2)
+% plot(f, dJcw); 
+% hold on;
+% plot(f, dJcw)
 
 %% Get distributions
 
-T = [1];%, 1, 0.1];
+T = [100];%, 1, 0.1];
 eP1    = zeros(numel(f), numel(T));
 
 for tind = 1:numel(T) 
