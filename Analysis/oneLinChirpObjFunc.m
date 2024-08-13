@@ -28,8 +28,8 @@ ym = addGaussianNoise(xm, snr);
 plot(real(ym));
 
 %% 1. Grid of parameters
-f = 10:0.05:40;
-m = 40:0.05:100;
+f = 10:0.5:40;
+m = 40:0.5:100;
 
 J = zeros(numel(f),numel(m));
 H = zeros(N, Nc);

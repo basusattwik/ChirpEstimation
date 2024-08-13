@@ -51,8 +51,9 @@ end
 
 % Compute Hhat
 % Get the projection matrix and the orthogonal projection matrix
-obj.P  = obj.H * (obj.H' * obj.H)^(-1) * obj.H';
-obj.Po = eye(obj.N, obj.N) - obj.P;
+obj.Hhat = (obj.H' * obj.H)^(-1) * obj.H';
+obj.P    = obj.H * obj.Hhat;
+obj.Po   = eye(obj.N, obj.N) - obj.P;
 
 k = 0;
 for c = 1:Nc
@@ -69,7 +70,7 @@ for c = 1:Nc
 
         % Get the gradient of H wrt phi
         obj.dH_phi(:,c,k) = 2*pi*1j * (obj.n .* oneOverFs).^p .* obj.H(:,c);
-        obj.dJ_phi(1,k)   = -2 * real(obj.ym' * obj.Po * obj.dH_phi(:,:,k) * ((obj.H' * obj.H)^(-1) * obj.H') * obj.ym);     
+        obj.dJ_phi(1,k)   = -2 * real(obj.ym' * obj.Po * obj.dH_phi(:,c,k) * obj.Hhat(c,:) * obj.ym);     
     end
 
 end
