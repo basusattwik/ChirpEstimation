@@ -86,7 +86,7 @@ classdef classLangevinMonteCarlo < handle
             end
 
             % Init state params and gradients
-            obj.param       = unifrnd(10, 60, obj.numParams, obj.numParticles);
+            obj.param       = unifrnd(0, 60, obj.numParams, obj.numParticles);
             obj.grads       = zeros(obj.numParams, obj.numParticles); 
             obj.avgGrads    = zeros(obj.numParams, obj.numParticles);
             obj.avgGradNorm = zeros(1, obj.numParticles);

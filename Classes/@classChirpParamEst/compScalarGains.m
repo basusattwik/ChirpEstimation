@@ -27,7 +27,7 @@ end
 % Compute basis matrix
 for c = 1:Nc
     P = size(phi{1,c},1);
-    pvec = (0:P-1).';
+    pvec = (1:P-1).';
     for n = 1:N % -- loop over number of samples
 
         % Get the exponential polynomial phase sinusoid
@@ -40,5 +40,11 @@ end
 
 % Get the projection matrix and the orthogonal projection matrix
 obj.alpha  = (H' * H)^(-1) * H' * ym; 
+
+% Get absolute vals (rho)
+obj.rhoEst = abs(obj.alpha);
+
+% Get phase (phi_0)
+% phi0 = angle(obj.alpha);
 
 end

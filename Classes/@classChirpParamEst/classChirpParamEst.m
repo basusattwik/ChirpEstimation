@@ -15,17 +15,21 @@ classdef classChirpParamEst < handle
         c;        % Chirp index
         p;        % Polynomial phase coeff index
         k;        % Index of the current polynomial phase coeff (in the entire set)
-        K;        % Total number of polynomial phase coeff
+        Kp;       % Total number of polynomial phase coeff
+        Ka;       % Total number of polynomial amplitude coeff
         Pc;       % Array containing number of polynomial phase coeff in each chirp
+        Ac;       % Array containing number of polynomial amplitude coeff in each chirp
 
         % Signals for iteration steps
-        e;        % Chirps without amplitude envelope (N x Nc)
+        a;        % Chirp amplitude envelope (N x Nc)
+        e;        % Chirps without amplitude envelope (N x Ka)
         u;        % Chirps with amplitude envelepe (N x Nc)
         x;        % Clean chirp (N x 1)
         xg;       % Basis for gamma (Nx1)
         w;        % White Gaussian noise at specified snr (N x 1)
 
         % Generated signals
+        am;       % Chirp amplitude envelopes (N x Nc)
         em;       % Chirps without amplitude envelope (N x Nc)
         um;       % Chirps with amplitude envelepe (N x Nc)
         xm;       % Clean mixture of chirps (N x 1)
@@ -36,11 +40,14 @@ classdef classChirpParamEst < handle
         % env;      % Amplitude env for each chirp (N x Nc)
         alpha;    % Scalar gains (1 x Nc)
         phi;      % Phase polynomial parameters (1 x Nc but cell array)
+        rho;      % Amplitude polynomial parameters (1 x Nc but cell array)
         snr;      % Signal-to-Noise ratio in dB
 
         % Terms used in iterative estimation
         J;        % Objective function value (scalar)
         alphaEst; % Scalar gains (1 x Nc)
+        rhoEst;
+        rhoEstCell;
         phiEst;   % Phase polynomial parameters array (1 x K)
         phiEstCell; % Phase polynomial parameters in cell (1 x Nc)
         H;        % Basis matrix (N x Nc)
@@ -65,6 +72,7 @@ classdef classChirpParamEst < handle
             obj.Nc    = cpeSetting.Nc;
             obj.alpha = cpeSetting.alpha;
             obj.phi   = cpeSetting.phi;
+            obj.rho   = cpeSetting.rho;
             obj.snr   = cpeSetting.snr;
             
             obj.N = obj.fs * obj.Td;
@@ -73,12 +81,18 @@ classdef classChirpParamEst < handle
             obj.p = 1;
             obj.k = 1;
 
-            % Fill out Pc array and compute total phase params K
+            % Fill out Pc and Ac arrays and compute total phase params K
             obj.Pc  = zeros(obj.Nc, 1);
             for c = 1:obj.Nc
                 obj.Pc(c,1) = size(obj.phi{1,c}, 1);
             end
-            obj.K = sum(obj.Pc);
+            obj.Kp = sum(obj.Pc);
+
+            obj.Ac  = zeros(obj.Nc, 1);
+            for c = 1:obj.Nc
+                obj.Ac(c,1) = size(obj.rho{1,c}, 1);
+            end
+            obj.Ka = sum(obj.Ac);
 
             % Init chirp signals based on the settings file
             obj = obj.resetArrays();
