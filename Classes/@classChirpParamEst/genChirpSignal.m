@@ -10,7 +10,7 @@ Ac = obj.Ac;
 
 oneOverFs = 1/fs;
 
-% Calculate the polynomial chirp
+% Calculate the polynomial chirp (NOT vectorized... but does not run in loops)
 for c = 1:Nc  % -- loop over number of chirps
 
     rho  = obj.rho{1,c};

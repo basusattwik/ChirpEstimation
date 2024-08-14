@@ -54,6 +54,7 @@ classdef classChirpParamEst < handle
         Hhat;     % An important intermediate term (N x Nc)
         P;        % Signal projection matrix
         Po;       % Noise projection matrix
+        Id;       % Identity matrix used to compute Po = I - P;
 
         % Gradients
         dH_phi;   % Gradient of H wrt phi   (N x Nc x K)

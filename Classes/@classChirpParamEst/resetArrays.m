@@ -27,6 +27,7 @@ obj.P        = zeros(obj.N,  obj.N);
 obj.Po       = zeros(obj.N,  obj.N);
 obj.dH_phi   = zeros(obj.N,  obj.Ka, obj.Kp - obj.Nc);
 obj.dJ_phi   = zeros(1, obj.Kp - obj.Nc);
+obj.Id       = zeros(obj.N, obj.N);
 
 
 end
