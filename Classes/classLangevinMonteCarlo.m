@@ -71,7 +71,7 @@ classdef classLangevinMonteCarlo < handle
             obj.temper       = zeros(1, 1);
 
             for pind = 1:obj.numParticles
-                obj.stepSizeInit(:,pind) = tuning.stepSize;
+                obj.stepSizeInit(:,pind) = tuning.stepSize(1:obj.numParams);
                 for npr = 1:obj.numParams
                     obj.stepSizeMax(npr,pind) = tuning.stepSizeMax;
                 end
@@ -86,7 +86,7 @@ classdef classLangevinMonteCarlo < handle
             end
 
             % Init state params and gradients
-            obj.param       = unifrnd(0, 60, obj.numParams, obj.numParticles);
+            obj.param       = unifrnd(0, 70, obj.numParams, obj.numParticles);
             obj.grads       = zeros(obj.numParams, obj.numParticles); 
             obj.avgGrads    = zeros(obj.numParams, obj.numParticles);
             obj.avgGradNorm = zeros(1, obj.numParticles);

@@ -9,7 +9,7 @@ fs = obj.fs;
 
 % Avoiding divides
 nvecOverFs = obj.n / fs;
-twoPij = 2*pi*1j;
+twoPij  = 2*pi*1j;
 
 startInd = 1;
 for c = 1:Nc
@@ -43,9 +43,9 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Get the projection matrix and the orthogonal projection matrix
-obj.Hhat = pinv(obj.H' * obj.H) * obj.H';
+obj.Hhat = (obj.H' * obj.H)^(-1) * obj.H';
 obj.P    = obj.H * obj.Hhat;
-obj.Po   = obj.Id - obj.P;
+obj.Po   = obj.Id - obj.P; % Can optimize
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                             %
@@ -58,11 +58,11 @@ startInd = 1;
 for c = 1:Nc
 
     endInd = startInd + Ac(c) - 1;
-    for p = 1:Pc(c)-Nc
+    for p = 1:Pc(c)-1
         k = k+1;
 
         % Gradient of H wrt phi
-        obj.dH_phi(:,startInd:endInd,k) = twoPij .* nvecOverFs .* obj.H(:,startInd:endInd);
+        obj.dH_phi(:,startInd:endInd,k) = twoPij .* nvecOverFs.^p .* obj.H(:,startInd:endInd);
 
         % Gradient of J wrt phi
         obj.dJ_phi(1,k) = -2 * real(obj.ym' * (obj.Po * (obj.dH_phi(:,startInd:endInd,k) * (obj.Hhat(startInd:endInd,:) * obj.ym))));
