@@ -37,10 +37,10 @@ for c = 1:Nc
 end
 
 % Get the projection matrix and the orthogonal projection matrix
-P  = H * pinv(H' * H) * H'; 
+P  = H * ((H' * H) \ H'); %H * ((H' * H)^(-1) * H'); 
 Po = obj.Id - P;
 
 % Objective function value
-J = norm(Po * ym)^2;
+J = real(ym' * (Po * ym)); %norm(Po * ym)^2;
 
 end

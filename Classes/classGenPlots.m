@@ -115,7 +115,7 @@ classdef classGenPlots < handle
             nexttile
                 for pind = 1:obj.numParticles
                     gradp = reshape(squeeze(obj.avgGradNorm(pind,:,:)), [], 1);
-                    plot(nx, gradp, 'LineWidth', 1.2, 'DisplayName', ['particle ', num2str(pind)]); hold on;
+                    plot(nx, gradp, 'LineWidth', 1.1, 'DisplayName', ['particle ', num2str(pind)]); hold on;
                 end
                 hold off; grid on; grid minor;
                 xlabel('Iterations', 'FontSize', 12); 
@@ -136,7 +136,7 @@ classdef classGenPlots < handle
             nexttile
                 for pind = 1:obj.numParticles
                     objp    = reshape(squeeze(obj.objFunc(pind,:,:)), [], 1);
-                    avgObjp = movmean(objp, 50);
+                    avgObjp = smoothdata(objp, 'sgolay', 100);
                     plot(nx, avgObjp, 'LineWidth', 1.2, 'DisplayName', ['particle ', num2str(pind)]); hold on;
                 end
                 hold off; grid on; grid minor;
@@ -158,7 +158,7 @@ classdef classGenPlots < handle
                 nexttile
                 for pind = 1:obj.numParticles                   
                     theta = reshape(squeeze(obj.param(prind, pind, :, :)), [], 1); hold on;
-                    plot(nx, theta, 'LineWidth', 1.2, 'DisplayName', ['particle ', num2str(pind)]);
+                    plot(nx, theta, 'LineWidth', 1.1, 'DisplayName', ['particle ', num2str(pind)]);
                     grid on; grid minor;
                     xlabel('Iterations', 'FontSize', 12); 
                     ylabel(['$$\varphi_',num2str(prind),'$$'], 'FontSize', 20, 'Interpreter','latex');              
