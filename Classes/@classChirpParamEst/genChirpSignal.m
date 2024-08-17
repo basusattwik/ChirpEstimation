@@ -23,10 +23,12 @@ for c = 1:Nc  % -- loop over number of chirps
         % Get the exponential polynomial phase sinusoid with polynomial
         % amplitude
         npvec = ((nind-1) * oneOverFs).^(1:Pc(c)-1); % vectors of powers of n/fs
+        nfvec = ((nind-1) * oneOverFs).^(0:Pc(c)-2);
         navec = ((nind-1) * oneOverFs).^(0:Ac(c)-1);
 
-        obj.am(nind,c) = navec * rho;
-        obj.em(nind,c) = exp(1j * (phi0 + 2*pi .* (npvec * phi))); % exp(j * phi_0 + 2pij * phi(t))
+        obj.am(nind, c) = navec  * rho;
+        obj.fim(nind,c) = nfvec  * ((1:Pc(c)-1).' .* phi);
+        obj.em(nind, c) = exp(1j * (phi0 + 2*pi .* (npvec * phi))); % exp(j * phi_0 + 2pij * phi(t))
 
     end % -- end loop over number of chirps
 end % -- end loop over number of samples

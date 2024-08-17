@@ -43,7 +43,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Get the projection matrix and the orthogonal projection matrix
-obj.Hhat = (obj.H' * obj.H)^(-1) * obj.H';
+obj.Hhat = pinv(obj.H' * obj.H) * obj.H';
 obj.P    = obj.H * obj.Hhat;
 obj.Po   = obj.Id - obj.P; % Can optimize
 
@@ -72,6 +72,7 @@ for c = 1:Nc
 end
 
 % Objective function value: want to minimize this
-obj.J = real(obj.ym' * (obj.Po * obj.ym)); % Force it to be real to prevent tiny imaginary values ~ e-16
+% obj.J = obj.ym' * (obj.Po * obj.ym); % Force it to be real to prevent tiny imaginary values ~ e-16
+obj.J = norm(obj.Po * obj.ym)^2;
 
 end

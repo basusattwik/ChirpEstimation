@@ -86,7 +86,7 @@ classdef classLangevinMonteCarlo < handle
             end
 
             % Init state params and gradients
-            obj.param       = unifrnd(0, 70, obj.numParams, obj.numParticles);
+            obj.param       = unifrnd(0, 100, obj.numParams, obj.numParticles);
             obj.grads       = zeros(obj.numParams, obj.numParticles); 
             obj.avgGrads    = zeros(obj.numParams, obj.numParticles);
             obj.avgGradNorm = zeros(1, obj.numParticles);
@@ -221,7 +221,7 @@ classdef classLangevinMonteCarlo < handle
                                 return
                             end    
                             if mod(iterCount, 10) == 0
-                                waitbar(iterCount / totalNumIter);
+                                waitbar(iterCount / totalNumIter, wbar, ['Noise Iteration: ', num2str(nind), '/', num2str(obj.numIterNoise)]);
                             end
 
                         end % end numParticles
@@ -260,7 +260,7 @@ classdef classLangevinMonteCarlo < handle
                 disp(['The optimum chirp parameters are =  ', num2str(obj.optParam.')]);
 
                 % Finally, compute the scalar gains for CPE
-                obj.cpe{1,minObjFuncInd} = obj.cpe{1,minObjFuncInd}.compScalarGains(obj.optParam);   
+                % obj.cpe{1,minObjFuncInd} = obj.cpe{1,minObjFuncInd}.compScalarGains(obj.optParam);   
 
                 % Housekeeping
                 disp('Simulation complete!')

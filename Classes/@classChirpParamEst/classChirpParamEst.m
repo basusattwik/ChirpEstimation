@@ -35,17 +35,15 @@ classdef classChirpParamEst < handle
         xm;       % Clean mixture of chirps (N x 1)
         ym;       % Noisy mixture of chirps (N x 1)
         wm;       % White Gaussian noise at specified snr (N x 1)
+        fim;      % Instantaneous frequency
 
         % Chirp properties (settings)
-        % env;      % Amplitude env for each chirp (N x Nc)
-        alpha;    % Scalar gains (1 x Nc)
         phi;      % Phase polynomial parameters (1 x Nc but cell array)
         rho;      % Amplitude polynomial parameters (1 x Nc but cell array)
         snr;      % Signal-to-Noise ratio in dB
 
         % Terms used in iterative estimation
         J;        % Objective function value (scalar)
-        alphaEst; % Scalar gains (1 x Nc)
         rhoEst;
         rhoEstCell;
         phiEst;   % Phase polynomial parameters array (1 x K)
@@ -71,7 +69,6 @@ classdef classChirpParamEst < handle
             obj.fs    = cpeSetting.fs;
             obj.Td    = cpeSetting.Td;
             obj.Nc    = cpeSetting.Nc;
-            obj.alpha = cpeSetting.alpha;
             obj.phi   = cpeSetting.phi;
             obj.rho   = cpeSetting.rho;
             obj.snr   = cpeSetting.snr;
