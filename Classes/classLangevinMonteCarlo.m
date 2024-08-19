@@ -112,6 +112,7 @@ classdef classLangevinMonteCarlo < handle
             end
         end
 
+        % Core Simulation Function
         function obj = runLmcCore(obj)
             %RUNLMCCORE Summary of this method goes here
             %   Detailed explanation goes here
@@ -147,8 +148,19 @@ classdef classLangevinMonteCarlo < handle
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
                             % Get all the gradients
-                            obj.cpe{1,pind}   = obj.cpe{1,pind}.runCpeCore(obj.param(:,pind)); % This gives the gradients wrt all params for all particles
+                            % obj.cpe{1,pind}   = obj.cpe{1,pind}.runCpeCore(obj.param(:,pind)); % This gives the gradients wrt all params for all particles
+
+                            % Extra noisy version
+                            extraNoise = obj.noiseVar(1, nind) .* randn(obj.numParams,1);
+                            obj.cpe{1,pind}   = obj.cpe{1,pind}.runCpeCore(obj.param(:,pind) + extraNoise); % This gives the gradients wrt all params for all particles
                             obj.grads(:,pind) = obj.cpe{1,pind}.dJ_phi.'; 
+                            
+                            % for sind = 1:1
+                            %     obj.cpe{1,pind} = obj.cpe{1,pind}.runCpeCore(obj.param(:,pind) + obj.noiseVar(1, nind) .* randn(obj.numParams,1)); % This gives the gradients wrt all params for all particles
+                            %     smoothedGrads   = smoothedGrads + obj.cpe{1,pind}.dJ_phi.'; 
+                            % end
+                            % obj.grads(:,pind) = smoothedGrads / 1;
+                            % smoothedGrads(:)  = 0;
 
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                             %                            %
@@ -180,9 +192,13 @@ classdef classLangevinMonteCarlo < handle
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                          
     
                             % Do Langevin updates on all params to get a new proposed point
+                            % paramProp = obj.param(:,pind) - obj.stepSize(:,pind) .* obj.grads(:,pind) + ...
+                            %                                 sqrt(2 * obj.stepSize(:,pind) ./ obj.temper) .* randn(obj.numParams,1) + ...
+                            %                                 obj.noiseVar(1, nind) .* randn(obj.numParams,1);   
+
                             paramProp = obj.param(:,pind) - obj.stepSize(:,pind) .* obj.grads(:,pind) + ...
                                                             sqrt(2 * obj.stepSize(:,pind) ./ obj.temper) .* randn(obj.numParams,1) + ...
-                                                            obj.noiseVar(1, nind) .* randn(obj.numParams,1);                
+                                                            extraNoise;       
             
                             % Run Metropolis Adjustment
                             alpha = min(1, exp(-obj.temper * (obj.cpe{1,pind}.evalObjectiveFunc(paramProp) - obj.cpe{1,pind}.J)));
@@ -260,7 +276,10 @@ classdef classLangevinMonteCarlo < handle
                 disp(['The optimum chirp parameters are =  ', num2str(obj.optParam.')]);
 
                 % Finally, compute the scalar gains for CPE
-                % obj.cpe{1,minObjFuncInd} = obj.cpe{1,minObjFuncInd}.compScalarGains(obj.optParam);   
+                obj.cpe{1,minObjFuncInd} = obj.cpe{1,minObjFuncInd}.compScalarGains(obj.optParam);   
+
+                % Store best particle index
+                % Compute b vector (amp and phase too)
 
                 % Housekeeping
                 disp('Simulation complete!')
@@ -270,6 +289,24 @@ classdef classLangevinMonteCarlo < handle
                 delete(wbar); % Close wait bar when simulation errors out
                 throw(me);
             end
+        end
+
+        % Generate a live plot of the objective function as the sim
+        % progresses
+        function dispObjFuncPlot(obj, itrIndex)
+            figure('windowstyle','docked');
+                for pind = 1:obj.numParticles
+                    objp    = reshape(squeeze(obj.objFunc(pind,:,:)), [], 1);
+                    avgObjp = smoothdata(objp, 'sgolay', 100);
+                    plot(nx, avgObjp, 'LineWidth', 1.2, 'DisplayName', ['particle ', num2str(pind)]); hold on;
+                end
+                hold off; grid on; grid minor;
+                xlabel('Iterations', 'FontSize', 12); 
+                ylabel('Objective Func', 'FontSize', 12);
+                title('Objective Function vs Iterations', 'FontSize', 14);
+                lgd = legend('show', 'Location', 'best');
+                fontsize(lgd, 12, 'points');
+
         end
     end
 end

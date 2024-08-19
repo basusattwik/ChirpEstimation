@@ -7,44 +7,41 @@ fs = obj.fs;
 N  = obj.N;
 Nc = obj.Nc;
 Pc = obj.Pc;
+Ac = obj.Ac;
 ym = obj.ym;
+Ka = obj.Ka;
 
 % Preallocate for speed
-phi = cell(1, Nc);
-e   = zeros(N, 1);
-H   = zeros(N, Nc);
+phiCell = cell(1, Nc);
+H = zeros(N, Ka);
 
-% Avoiding divides
-oneOverFs = 1/fs;
+nvecOverFs = obj.n / fs;
+twoPij = 2*pi*1j;
 
-% Extract current params into data structs
 startInd = 1;
 for c = 1:Nc
-    phi{1,c} = params(startInd:startInd+Pc(c)-1);
-    startInd = startInd + Pc(c);
+    phiCell{1,c} = params(startInd:startInd+Pc(c)-2);
+    startInd = startInd + Pc(c) - 1;
 end
 
-% Compute basis matrix
+startInd = 1;
 for c = 1:Nc
-    P = size(phi{1,c},1);
-    pvec = (1:P-1).';
-    for n = 1:N % -- loop over number of samples
+    phi  = phiCell{1,c};
+    pvec = (1:Pc(c)-1);
+    avec = (0:Ac(c)-1);
 
-        % Get the exponential polynomial phase sinusoid
-        npvec  = ((n-1) * oneOverFs).^pvec; % vectors of powers of n/fs
-        e(n,1) = exp(2*pi*1j .* (phi{1,c}.' * npvec));
-    end
-    x = e;
-    H(:,c) = x;
+    endInd = startInd+Ac(c)-1;
+    H(:, startInd:endInd) = (nvecOverFs.^avec) .* exp(twoPij .* ((nvecOverFs.^pvec) * phi));
+    startInd = startInd + Ac(c);
 end
 
 % Get the projection matrix and the orthogonal projection matrix
-obj.alpha  = (H' * H)^(-1) * H' * ym; 
+obj.bvec  = H \ ym; %((H' * H) \ H') * ym; 
 
 % Get absolute vals (rho)
-obj.rhoEst = abs(obj.alpha);
+obj.rhoEst = abs(obj.bvec);
 
 % Get phase (phi_0)
-% phi0 = angle(obj.alpha);
+phi0 = angle(obj.bvec);
 
 end

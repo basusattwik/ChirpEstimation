@@ -27,7 +27,7 @@ end
 
 startInd = 1;
 for c = 1:Nc
-    phi  = obj.phiEstCell{1,c};
+    phi  = phiCell{1,c};
     pvec = (1:Pc(c)-1);
     avec = (0:Ac(c)-1);
 
@@ -37,10 +37,10 @@ for c = 1:Nc
 end
 
 % Get the projection matrix and the orthogonal projection matrix
-P  = H * ((H' * H) \ H'); %H * ((H' * H)^(-1) * H'); 
+P  = H * ((H' * H) \ H'); 
 Po = obj.Id - P;
 
 % Objective function value
-J = real(ym' * (Po * ym)); %norm(Po * ym)^2;
+J = real(ym' * (Po * ym));
 
 end

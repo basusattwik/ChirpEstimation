@@ -53,6 +53,7 @@ classdef classChirpParamEst < handle
         P;        % Signal projection matrix
         Po;       % Noise projection matrix
         Id;       % Identity matrix used to compute Po = I - P;
+        bvec;     % Vector of amplitude & phase offsets
 
         % Gradients
         dH_phi;   % Gradient of H wrt phi   (N x Nc x K)

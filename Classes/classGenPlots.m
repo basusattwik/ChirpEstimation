@@ -7,7 +7,7 @@ classdef classGenPlots < handle
         numIter;
         numParticles;
         numParams;
-        chirps = struct('sampleRate',  1000, ...
+        chirps = struct('sampleRate', 1000, ...
                         'numSamples', 100, ...
                         'numChirps',  1,  ...
                         'envelope',   [], ...
@@ -20,6 +20,8 @@ classdef classGenPlots < handle
         gradNorm;
         avgGradNorm;
         objFunc;
+        temp;
+        bAccept;
 
         % Compute
         instFreq;
@@ -43,6 +45,8 @@ classdef classGenPlots < handle
             obj.gradNorm    = simClass.saveGradNorm;
             obj.avgGradNorm = simClass.saveAvgGradNorm;
             obj.objFunc     = simClass.saveObjFunc;
+            obj.temp        = simClass.saveTemper;
+            obj.bAccept     = simClass.savebAccept;
 
             obj.numParticles = simClass.numParticles;
             obj.numIter = simClass.numIterLmc * simClass.numIterNoise;
@@ -59,6 +63,7 @@ classdef classGenPlots < handle
             xm = obj.chirps.chirpComponents;
             ym = obj.chirps.chirpMixed;
             fim = obj.chirps.instFreq;
+            bAc = obj.bAccept;
 
             Td = N / fs;
             tx = 0:1/fs:Td-1/fs;
@@ -124,6 +129,27 @@ classdef classGenPlots < handle
                 lgd = legend('show', 'Location', 'best');
                 fontsize(lgd, 12, 'points');
 
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %                                %
+            % --- Plotting Accept/Reject --- %
+            %                                %
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+            figure('windowstyle','docked');
+            tiledlayout flow;
+
+            nexttile
+                for pind = 1:obj.numParticles
+                    bAVec = reshape(squeeze(bAc(pind,:,:)), [], 1);
+                    plot(nx, bAVec, 'LineWidth', 1.1, 'DisplayName', ['particle ', num2str(pind)]); hold on;
+                end
+                hold off; grid on; grid minor;
+                xlabel('Iterations', 'FontSize', 12); 
+                ylabel('Accept/Reject', 'FontSize', 20);
+                title('Metropolis Accept/Reject vs Iterations', 'FontSize', 14);
+                lgd = legend('show', 'Location', 'best');
+                fontsize(lgd, 12, 'points');
+
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             %                                     %
             % --- Plotting Objective Function --- %
@@ -131,9 +157,9 @@ classdef classGenPlots < handle
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
             figure('windowstyle','docked');
-            tiledlayout flow;
-
-            nexttile
+            % tiledlayout flow;
+            % 
+            % nexttile
                 for pind = 1:obj.numParticles
                     objp    = reshape(squeeze(obj.objFunc(pind,:,:)), [], 1);
                     avgObjp = smoothdata(objp, 'sgolay', 100);
@@ -143,6 +169,48 @@ classdef classGenPlots < handle
                 xlabel('Iterations', 'FontSize', 12); 
                 ylabel('Objective Func', 'FontSize', 12);
                 title('Objective Function vs Iterations', 'FontSize', 14);
+                lgd = legend('show', 'Location', 'best');
+                fontsize(lgd, 12, 'points');
+
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %                                        %
+            % --- Plotting Stepsize Trajectories --- %
+            %                                        %
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+            figure('windowstyle','docked');
+            tl = tiledlayout('flow');
+            for prind = 1:obj.numParams
+                nexttile
+                for pind = 1:obj.numParticles                   
+                    mu = reshape(squeeze(obj.stepSize(prind, pind, :, :)), [], 1); hold on;
+                    avgmu = smoothdata(mu, 'sgolay', 100);
+                    plot(nx, avgmu, 'LineWidth', 1.1, 'DisplayName', ['particle ', num2str(pind)]);
+                    grid on; grid minor;
+                    xlabel('Iterations', 'FontSize', 12); 
+                    ylabel(['$$\eta_',num2str(prind),'$$'], 'FontSize', 20, 'Interpreter','latex');              
+                end
+                lgd = legend('show', 'Location', 'best');
+                fontsize(lgd, 12, 'points');
+                title(['Parameter ', num2str(prind)], 'FontSize', 14);                 
+            end   
+            title(tl, 'Stepsize vs Iterations', 'FontSize', 16); 
+
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %                              %
+            % --- Plotting Temperature --- %
+            %                              %
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+            figure('windowstyle','docked');
+            % tiledlayout flow;
+            % 
+            % nexttile
+                plot(obj.temp, 'LineWidth', 1.2, 'DisplayName', ['particle ', num2str(pind)]);
+                grid on; grid minor;
+                xlabel('Noise Iterations', 'FontSize', 12); 
+                ylabel('Temperature', 'FontSize', 12);
+                title('Temperature vs Iterations', 'FontSize', 14);
                 lgd = legend('show', 'Location', 'best');
                 fontsize(lgd, 12, 'points');
 
@@ -168,6 +236,7 @@ classdef classGenPlots < handle
                 title(['Parameter ', num2str(prind)], 'FontSize', 14);                 
             end   
             title(tl, 'Parameter Trajectories vs Iterations', 'FontSize', 16); 
+
         end
     end
 end

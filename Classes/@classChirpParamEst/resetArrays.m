@@ -15,6 +15,7 @@ obj.xm  = zeros(obj.N, 1);
 obj.ym  = zeros(obj.N, 1);
 obj.wm  = zeros(obj.N, 1);
 
+obj.bvec       = zeros(obj.Ka, 1);
 obj.phiEst     = zeros(1, obj.Kp);
 obj.rhoEst     = zeros(1, obj.Ka);
 obj.phiEstCell = cell(1,  obj.Nc);
