@@ -15,6 +15,7 @@ classdef classLangevinMonteCarlo < handle
         numParticles;
         numIterNoise;
         numIterLmc;
+        numIterLmcAndNoise;
         noiseVarInit;
         noiseVarFinal;
 
@@ -33,6 +34,9 @@ classdef classLangevinMonteCarlo < handle
         gradNorm;
         avgGradNorm;
         avgGrads; 
+
+        % Bools
+        bDisplayPlots
 
         % External
         cpe; % classChirpParamEst
@@ -64,6 +68,7 @@ classdef classLangevinMonteCarlo < handle
             obj.numIterLmc    = tuning.numIterLmc;
             obj.noiseVarInit  = tuning.noiseVarInit;
             obj.noiseVarFinal = tuning.noiseVarFinal; 
+            obj.bDisplayPlots = tuning.bDisplayPlots;
 
             obj.stepSizeInit = zeros(obj.numParams, obj.numParticles);
             obj.stepSize     = zeros(obj.numParams, obj.numParticles);
@@ -85,8 +90,10 @@ classdef classLangevinMonteCarlo < handle
                 obj.noiseVar(1,ni) = obj.noiseVarInit / (obj.noiseVarRatio)^(ni-1);
             end
 
+            obj.numIterLmcAndNoise = obj.numIterLmc * obj.numIterNoise;
+
             % Init state params and gradients
-            obj.param       = unifrnd(0, 100, obj.numParams, obj.numParticles);
+            obj.param       = unifrnd(20, 60, obj.numParams, obj.numParticles);
             obj.grads       = zeros(obj.numParams, obj.numParticles); 
             obj.avgGrads    = zeros(obj.numParams, obj.numParticles);
             obj.avgGradNorm = zeros(1, obj.numParticles);
@@ -117,13 +124,19 @@ classdef classLangevinMonteCarlo < handle
             %RUNLMCCORE Summary of this method goes here
             %   Detailed explanation goes here
 
-            % Create a wait bar display
-            wbar = waitbar(0, 'Sit tight!', 'Name','Running Langevin Monte Carlo', ...
-                              'CreateCancelBtn', 'setappdata(gcbf, ''canceling'', 1)');
-            totalNumIter = obj.numIterNoise * obj.numIterLmc * obj.numParticles;
-            iterCount    = 1;
-
             try 
+
+                % Create a wait bar display
+                waitbarIterCount = 1;
+                wbar = waitbar(0, 'Sit tight!', 'Name','Running Langevin Monte Carlo', ...
+                                  'CreateCancelBtn', 'setappdata(gcbf, ''canceling'', 1)');
+                totalNumIter = obj.numIterNoise * obj.numIterLmc * obj.numParticles;
+                
+                % Initialize a live plotter
+                if obj.bDisplayPlots
+                    ax = initLivePlots(obj);
+                end
+
                 for nind = 1:obj.numIterNoise
 
                     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -148,12 +161,13 @@ classdef classLangevinMonteCarlo < handle
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
                             % Get all the gradients
-                            % obj.cpe{1,pind}   = obj.cpe{1,pind}.runCpeCore(obj.param(:,pind)); % This gives the gradients wrt all params for all particles
+                            obj.cpe{1,pind}   = obj.cpe{1,pind}.runCpeCore(obj.param(:,pind)); % This gives the gradients wrt all params for all particles
+                            obj.grads(:,pind) = obj.cpe{1,pind}.dJ_phi.'; 
 
                             % Extra noisy version
-                            extraNoise = obj.noiseVar(1, nind) .* randn(obj.numParams,1);
-                            obj.cpe{1,pind}   = obj.cpe{1,pind}.runCpeCore(obj.param(:,pind) + extraNoise); % This gives the gradients wrt all params for all particles
-                            obj.grads(:,pind) = obj.cpe{1,pind}.dJ_phi.'; 
+                            % extraNoise = obj.noiseVar(1, nind) .* randn(obj.numParams,1);
+                            % obj.cpe{1,pind}   = obj.cpe{1,pind}.runCpeCore(obj.param(:,pind) + extraNoise); % This gives the gradients wrt all params for all particles
+                            % obj.grads(:,pind) = obj.cpe{1,pind}.dJ_phi.'; 
                             
                             % for sind = 1:1
                             %     obj.cpe{1,pind} = obj.cpe{1,pind}.runCpeCore(obj.param(:,pind) + obj.noiseVar(1, nind) .* randn(obj.numParams,1)); % This gives the gradients wrt all params for all particles
@@ -192,13 +206,13 @@ classdef classLangevinMonteCarlo < handle
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                          
     
                             % Do Langevin updates on all params to get a new proposed point
-                            % paramProp = obj.param(:,pind) - obj.stepSize(:,pind) .* obj.grads(:,pind) + ...
-                            %                                 sqrt(2 * obj.stepSize(:,pind) ./ obj.temper) .* randn(obj.numParams,1) + ...
-                            %                                 obj.noiseVar(1, nind) .* randn(obj.numParams,1);   
-
                             paramProp = obj.param(:,pind) - obj.stepSize(:,pind) .* obj.grads(:,pind) + ...
                                                             sqrt(2 * obj.stepSize(:,pind) ./ obj.temper) .* randn(obj.numParams,1) + ...
-                                                            extraNoise;       
+                                                            obj.noiseVar(1, nind) .* randn(obj.numParams,1);   
+
+                            % paramProp = obj.param(:,pind) - obj.stepSize(:,pind) .* obj.grads(:,pind) + ...
+                            %                                 sqrt(2 * obj.stepSize(:,pind) ./ obj.temper) .* randn(obj.numParams,1) + ...
+                            %                                 extraNoise;       
             
                             % Run Metropolis Adjustment
                             alpha = min(1, exp(-obj.temper * (obj.cpe{1,pind}.evalObjectiveFunc(paramProp) - obj.cpe{1,pind}.J)));
@@ -228,7 +242,7 @@ classdef classLangevinMonteCarlo < handle
                             %%%%%%%%%%%%%%%%%%%
 
                             % Increment iteration count for waitbar
-                            iterCount = iterCount + 1;
+                            waitbarIterCount = waitbarIterCount + 1;
 
                             % Update waitbar and message
                             if getappdata(wbar, 'canceling')
@@ -236,11 +250,12 @@ classdef classLangevinMonteCarlo < handle
                                 delete(wbar);
                                 return
                             end    
-                            if mod(iterCount, 10) == 0
-                                waitbar(iterCount / totalNumIter, wbar, ['Noise Iteration: ', num2str(nind), '/', num2str(obj.numIterNoise)]);
+                            if mod(waitbarIterCount, 10) == 0
+                                waitbar(waitbarIterCount / totalNumIter, wbar, ['Noise Iteration: ', num2str(nind), '/', num2str(obj.numIterNoise)]);
                             end
 
                         end % end numParticles
+                      
                     end % end numIterLmc
 
                     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -257,6 +272,11 @@ classdef classLangevinMonteCarlo < handle
 
                      % Save temperature
                      obj.saveTemper(1,nind) = obj.temper;
+
+                    % Update Live Plot
+                    if obj.bDisplayPlots
+                        updateLivePlots(obj, tind, nind, ax);
+                    end
 
                 end % end numIterNoise
 
@@ -291,22 +311,28 @@ classdef classLangevinMonteCarlo < handle
             end
         end
 
-        % Generate a live plot of the objective function as the sim
-        % progresses
-        function dispObjFuncPlot(obj, itrIndex)
+        % Initialize live plots of the objective function
+        function ax = initLivePlots(obj)
             figure('windowstyle','docked');
-                for pind = 1:obj.numParticles
-                    objp    = reshape(squeeze(obj.objFunc(pind,:,:)), [], 1);
-                    avgObjp = smoothdata(objp, 'sgolay', 100);
-                    plot(nx, avgObjp, 'LineWidth', 1.2, 'DisplayName', ['particle ', num2str(pind)]); hold on;
-                end
-                hold off; grid on; grid minor;
+                ax = plot(1:obj.numIterLmcAndNoise, -ones(obj.numIterLmcAndNoise,obj.numParticles), 'LineWidth', 1.5); 
+                grid on; grid minor;
                 xlabel('Iterations', 'FontSize', 12); 
-                ylabel('Objective Func', 'FontSize', 12);
+                ylabel('Objective Func', 'FontSize', 12); 
+                xlim([0, obj.numIterLmcAndNoise]);
+                ylim([0 inf]);
                 title('Objective Function vs Iterations', 'FontSize', 14);
+        end
+
+        % Generate a live plot of the objective function as the sim progresses
+        function updateLivePlots(obj, tind, nind, ax)
+            for pind = 1:obj.numParticles
+                objp    = reshape(squeeze(obj.saveObjFunc(pind,1:tind, 1:nind)), tind * nind, 1);
+                avgObjp = smoothdata(objp, 'sgolay', 150);
+                set(ax(pind), 'XData', 1:tind*nind, 'YData', avgObjp);
+                set(ax(pind), 'DisplayName', ['particle ', num2str(pind)]);
                 lgd = legend('show', 'Location', 'best');
                 fontsize(lgd, 12, 'points');
-
+            end
         end
     end
 end
