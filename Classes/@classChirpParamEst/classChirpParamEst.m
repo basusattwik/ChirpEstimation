@@ -58,6 +58,12 @@ classdef classChirpParamEst < handle
         % Gradients
         dH_phi;   % Gradient of H wrt phi   (N x Nc x K)
         dJ_phi;   % Gradient of J wrt phi   (1 x K)
+
+        % Booleans
+        bMinFound = false;
+
+        % Tolerances
+        minObjTol;
         
     end
 
@@ -73,6 +79,7 @@ classdef classChirpParamEst < handle
             obj.phi   = cpeSetting.phi;
             obj.rho   = cpeSetting.rho;
             obj.snr   = cpeSetting.snr;
+            obj.minObjTol = cpeSetting.minObjTol;
             
             obj.N = obj.fs * obj.Td;
             obj.n = (0:obj.N-1).';

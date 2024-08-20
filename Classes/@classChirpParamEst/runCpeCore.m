@@ -26,7 +26,6 @@ end
 % Create H matrix (basis vectors)
 startInd = 1;
 for c = 1:Nc
-
     phi  = obj.phiEstCell{1,c};
     pvec = (1:Pc(c)-1);
     avec = (0:Ac(c)-1);
@@ -73,5 +72,10 @@ end
 
 % Objective function value: want to minimize this
 obj.J = real(obj.ym' * (obj.Po * obj.ym)); % Force it to be real to prevent tiny imaginary values ~ e-16
+
+% Check if J is close to 0... that means we have converged
+if obj.J <= obj.minObjTol
+    obj.bMinFound = true;
+end
 
 end

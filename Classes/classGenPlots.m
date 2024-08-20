@@ -135,9 +135,6 @@ classdef classGenPlots < handle
             %                                %
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-            figure('windowstyle','docked');
-            tiledlayout flow;
-
             nexttile
                 for pind = 1:obj.numParticles
                     bAVec = reshape(squeeze(bAc(pind,:,:)), [], 1);
@@ -157,9 +154,6 @@ classdef classGenPlots < handle
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
             figure('windowstyle','docked');
-            % tiledlayout flow;
-            % 
-            % nexttile
                 for pind = 1:obj.numParticles
                     objp    = reshape(squeeze(obj.objFunc(pind,:,:)), [], 1);
                     avgObjp = smoothdata(objp, 'sgolay', 100);
@@ -203,12 +197,9 @@ classdef classGenPlots < handle
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
             figure('windowstyle','docked');
-            % tiledlayout flow;
-            % 
-            % nexttile
                 plot(obj.temp, 'LineWidth', 1.2, 'DisplayName', ['particle ', num2str(pind)]);
                 grid on; grid minor;
-                xlabel('Noise Iterations', 'FontSize', 12); 
+                xlabel('LMC Iterations', 'FontSize', 12); 
                 ylabel('Temperature', 'FontSize', 12);
                 title('Temperature vs Iterations', 'FontSize', 14);
                 lgd = legend('show', 'Location', 'best');
