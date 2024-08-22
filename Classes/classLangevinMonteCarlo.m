@@ -97,7 +97,7 @@ classdef classLangevinMonteCarlo < handle
             obj.numIterLmcAndNoise = obj.numIterLmc * obj.numIterNoise;
 
             % Init state params and gradients
-            obj.param       = unifrnd(10, 60, obj.numParams, obj.numParticles);
+            obj.param       = unifrnd(0, 100, obj.numParams, obj.numParticles);
             obj.grads       = zeros(obj.numParams, obj.numParticles); 
             obj.avgGrads    = zeros(obj.numParams, obj.numParticles);
             obj.avgGradNorm = zeros(1, obj.numParticles);
@@ -144,16 +144,10 @@ classdef classLangevinMonteCarlo < handle
                 totalGrads = zeros(obj.numParams, 1);
                 for nind = 1:obj.numIterNoise
 
-                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                    %                             %
-                    % --- Simulated Tempering --- %
-                    %                             %
-                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
                     % Save stepsize numerator
                     stepSizeNum = obj.stepSizeInit .* (obj.noiseVar(1, nind) / obj.noiseVarFinal)^2;
 
-                    for tind = 1:obj.numIterLmc 
+                    for tind = 1:obj.numIterLmc
                         for pind = 1:obj.numParticles 
 
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -189,28 +183,33 @@ classdef classLangevinMonteCarlo < handle
                             obj.avgGradNorm(1,pind) = obj.avgConst .* abs(obj.gradNorm(1,pind)) + (1 - obj.avgConst) .* obj.avgGradNorm(1,pind);
                             
                             % Update stepsize
-                            obj.stepSize(:,pind) = stepSizeNum(:,pind) ./ (1e-5 + obj.stepSizeConst .* obj.avgGrads(:,pind).^2);
+                            obj.stepSize(:,pind) = stepSizeNum(:,pind) ./ (1e-3 + obj.stepSizeConst .* obj.avgGrads(:,pind).^2);
                             
                             % Check if stepsize exceeds limits
                             for npr = 1:obj.numParams
                                 if obj.stepSize(npr,pind) > obj.stepSizeMax(npr,pind)
                                     obj.stepSize(npr,pind) = obj.stepSizeMax(npr,pind);
                                 end
-                            end
+                            end    
+
+                            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                            %                             %
+                            % --- Simulated Tempering --- %
+                            %                             %
+                            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
+                            % Adjust the temperature
+                            obj.temper = obj.tempConst * log10(1 + (tind));
+
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                             %                              %
                             % --- Langevin Monte Carlo --- %
                             %                              %
-                            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                         
-    
-                            % Adjust the temperature
-                            obj.temper = 1;%obj.tempConst * log10(1 + (tind));
+                            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%             
 
                             % Do Langevin updates on all params to get a new proposed point
                             paramProp = obj.param(:,pind) - obj.stepSize(:,pind) .* obj.grads(:,pind) + ...
-                                                            sqrt(2 * obj.stepSize(:,pind) ./ obj.temper) .* randn(obj.numParams,1) + ...
-                                                            obj.noiseVar(1, nind) .* randn(obj.numParams,1);   
+                                                            sqrt(2 * obj.stepSize(:,pind) ./ obj.temper) .* randn(obj.numParams,1);
 
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                             %                                   %
@@ -218,6 +217,7 @@ classdef classLangevinMonteCarlo < handle
                             %                                   %
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+                            % obj.param(:,pind) = paramProp;
                             alpha = min(1, exp(-obj.temper * (obj.cpe{1,pind}.evalObjectiveFunc(paramProp) - obj.cpe{1,pind}.J)));
                             if rand(1,1) <= alpha
                                 obj.param(:,pind) = paramProp;
@@ -328,30 +328,43 @@ classdef classLangevinMonteCarlo < handle
                 delete(wbar); % Close wait bar when simulation errors out
                 throw(me);
             end
+
         end
 
         % Initialize live plots of the objective function
         function ax = initLivePlots(obj)
+
+            params = [];
+            for c = 1:obj.cpe{1,1}.Nc
+                params = [params; obj.cpe{1,1}.phi{1,c}(2:end,1)]; %#ok<AGROW>
+            end
+            minObjFuncVal = obj.cpe{1,1}.evalObjectiveFunc(params);
+
             figure('windowstyle','docked');
-                ax = plot(1:obj.numIterLmcAndNoise, -ones(obj.numIterLmcAndNoise,obj.numParticles), 'LineWidth', 1.5); 
-                grid on; grid minor;
+                ax = plot(1:obj.numIterLmcAndNoise, -ones(obj.numIterLmcAndNoise,obj.numParticles),  'LineWidth', 1.1); hold on;
+                plot(1:obj.numIterLmcAndNoise, minObjFuncVal * ones(obj.numIterLmcAndNoise,1), '-.', 'LineWidth', 1.1, 'DisplayName', 'Min Objective Func.');
+                grid on; grid minor; 
                 xlabel('Iterations', 'FontSize', 12); 
                 ylabel('Objective Func', 'FontSize', 12); 
                 xlim([0, obj.numIterLmcAndNoise]);
-                ylim([0 inf]);
+                ylim([0, inf]);
                 title('Objective Function vs Iterations', 'FontSize', 14);
         end
 
         % Generate a live plot of the objective function as the sim progresses
         function updateLivePlots(obj, tind, nind, ax)
+            
             for pind = 1:obj.numParticles
+
                 objp    = reshape(squeeze(obj.saveObjFunc(pind,1:tind, 1:nind)), tind * nind, 1);
-                avgObjp = smoothdata(objp, 'sgolay', 20);
+                avgObjp = objp;%smoothdata(objp, 'sgolay', 20);
                 set(ax(pind), 'XData', 1:tind*nind, 'YData', avgObjp);
                 set(ax(pind), 'DisplayName', ['particle ', num2str(pind)]);
                 lgd = legend('show', 'Location', 'best');
                 fontsize(lgd, 12, 'points');
+
             end
+
         end
     end
 end

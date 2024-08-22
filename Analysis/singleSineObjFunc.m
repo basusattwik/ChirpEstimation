@@ -38,6 +38,11 @@ for find = 1:numel(f)
     dJ(find) = -2*real(y' * Po * dH * (H' * H)^(-1) * H' * y);
 end
 
+h = 1;
+ddJ = zeros(numel(f),1);
+for find = 2:numel(f)-1
+    ddJ(find) = (J(find+1)-2*J(find)+J(find-1))/0.005^2;
+end
 %% Gaussian smoothing J
 
  w = gausswin(512, 3);
@@ -65,19 +70,15 @@ for tind = 1:numel(T)
 end
 
 % close all
-figure('windowstyle','docked')
-tiledlayout flow
-nexttile
-    plot(f, J);
-
-    grid on; 
-nexttile
-    plot(f, dJ); hold on;
+figure('windowstyle','docked');
+    plot(f, J); hold on
+    plot(f, dJ); 
+    plot(f, abs(ddJ));
     grid on;
-nexttile
-    for tind = 1:numel(T)
-        hold on;
-        plot(f, eP1(:,tind), 'DisplayName', ['T = ', num2str(T(tind)), ' , \lambda = ', num2str(1/T(tind))]);
-    end
-    legend('show');
-    grid on; 
+% nexttile
+%     for tind = 1:numel(T)
+%         hold on;
+%         plot(f, eP1(:,tind), 'DisplayName', ['T = ', num2str(T(tind)), ' , \lambda = ', num2str(1/T(tind))]);
+%     end
+%     legend('show');
+%     grid on; 

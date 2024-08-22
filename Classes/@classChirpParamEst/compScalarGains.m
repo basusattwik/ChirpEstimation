@@ -36,7 +36,7 @@ for c = 1:Nc
 end
 
 % Get the projection matrix and the orthogonal projection matrix
-obj.bvec  = H \ ym; %((H' * H) \ H') * ym; 
+obj.bvec  = ((H' * H) \ H') * ym; 
 
 % Get absolute vals (rho)
 obj.rhoEst = abs(obj.bvec);

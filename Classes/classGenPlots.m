@@ -197,7 +197,7 @@ classdef classGenPlots < handle
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
             figure('windowstyle','docked');
-                plot(obj.temp, 'LineWidth', 1.2, 'DisplayName', ['particle ', num2str(pind)]);
+                plot(obj.temp(:,1), 'LineWidth', 1.2, 'DisplayName', ['particle ', num2str(pind)]);
                 grid on; grid minor;
                 xlabel('LMC Iterations', 'FontSize', 12); 
                 ylabel('Temperature', 'FontSize', 12);
