@@ -22,6 +22,8 @@ classdef classGenPlots < handle
         objFunc;
         temp;
         bAccept;
+        noiseVar;
+        paramProp; 
 
         % Compute
         instFreq;
@@ -47,6 +49,8 @@ classdef classGenPlots < handle
             obj.objFunc     = simClass.saveObjFunc;
             obj.temp        = simClass.saveTemper;
             obj.bAccept     = simClass.savebAccept;
+            obj.noiseVar    = simClass.noiseVar;
+            obj.paramProp   = simClass.saveProposedParams;
 
             obj.numParticles = simClass.numParticles;
             obj.numIter = simClass.numIterLmc * simClass.numIterNoise;
@@ -147,25 +151,6 @@ classdef classGenPlots < handle
                 lgd = legend('show', 'Location', 'best');
                 fontsize(lgd, 12, 'points');
 
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            %                                     %
-            % --- Plotting Objective Function --- %
-            %                                     %
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-            figure('windowstyle','docked');
-                for pind = 1:obj.numParticles
-                    objp    = reshape(squeeze(obj.objFunc(pind,:,:)), [], 1);
-                    avgObjp = smoothdata(objp, 'sgolay', 100);
-                    plot(nx, avgObjp, 'LineWidth', 1.2, 'DisplayName', ['particle ', num2str(pind)]); hold on;
-                end
-                hold off; grid on; grid minor;
-                xlabel('Iterations', 'FontSize', 12); 
-                ylabel('Objective Func', 'FontSize', 12);
-                title('Objective Function vs Iterations', 'FontSize', 14);
-                lgd = legend('show', 'Location', 'best');
-                fontsize(lgd, 12, 'points');
-
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             %                                        %
             % --- Plotting Stepsize Trajectories --- %
@@ -176,19 +161,31 @@ classdef classGenPlots < handle
             tl = tiledlayout('flow');
             for prind = 1:obj.numParams
                 nexttile
-                for pind = 1:obj.numParticles                   
-                    mu = reshape(squeeze(obj.stepSize(prind, pind, :, :)), [], 1); hold on;
-                    avgmu = smoothdata(mu, 'sgolay', 100);
-                    plot(nx, avgmu, 'LineWidth', 1.1, 'DisplayName', ['particle ', num2str(pind)]);
-                    grid on; grid minor;
-                    xlabel('Iterations', 'FontSize', 12); 
-                    ylabel(['$$\eta_',num2str(prind),'$$'], 'FontSize', 20, 'Interpreter','latex');              
-                end
+                    for pind = 1:obj.numParticles                   
+                        mu = reshape(squeeze(obj.stepSize(prind, pind, :, :)), [], 1); hold on;
+                        plot(nx, mu, 'LineWidth', 1.1, 'DisplayName', ['particle ', num2str(pind)]);
+                        grid on; grid minor;
+                        xlabel('Iterations', 'FontSize', 12); 
+                        ylabel(['$$\eta_',num2str(prind),'$$'], 'FontSize', 20, 'Interpreter','latex');              
+                    end
                 lgd = legend('show', 'Location', 'best');
                 fontsize(lgd, 12, 'points');
                 title(['Parameter ', num2str(prind)], 'FontSize', 14);                 
             end   
             title(tl, 'Stepsize vs Iterations', 'FontSize', 16); 
+
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %                                 %
+            % --- Plotting Noise Variance --- %
+            %                                 %
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+            nexttile
+                plot(1:numel(obj.noiseVar), obj.noiseVar, 'LineWidth', 1.1, 'DisplayName', ['particle ', num2str(pind)]);
+                grid on; grid minor;
+                xlabel('Noise Iterations', 'FontSize', 12); 
+                ylabel('$$\sigma$$', 'FontSize', 20, 'Interpreter','latex'); 
+                title(['Noise Variance ', num2str(prind)], 'FontSize', 14);     
 
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             %                              %
@@ -205,19 +202,42 @@ classdef classGenPlots < handle
                 lgd = legend('show', 'Location', 'best');
                 fontsize(lgd, 12, 'points');
 
+
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %                                     %
+            % --- Plotting Objective Function --- %
+            %                                     %
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+            figure('windowstyle','docked');
+            tl = tiledlayout('flow');
+            ax = zeros(obj.numParams+1, 1);
+            ax(1) = nexttile;
+                for pind = 1:obj.numParticles
+                    objp    = reshape(squeeze(obj.objFunc(pind,:,:)), [], 1);
+                    plot(nx, objp, 'LineWidth', 1.2, 'DisplayName', ['particle ', num2str(pind)]); hold on;
+                end
+                hold off; grid on; grid minor;
+                xlabel('Iterations', 'FontSize', 12); 
+                ylabel('Objective Func', 'FontSize', 12);
+                title('Objective Function vs Iterations', 'FontSize', 14);
+                lgd = legend('show', 'Location', 'best');
+                fontsize(lgd, 12, 'points');
+
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             %                                         %
             % --- Plotting Parameter Trajectories --- %
             %                                         %
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-            figure('windowstyle','docked');
-            tl = tiledlayout('flow');
             for prind = 1:obj.numParams
-                nexttile
+                ax(prind+1) = nexttile;
                 for pind = 1:obj.numParticles                   
-                    theta = reshape(squeeze(obj.param(prind, pind, :, :)), [], 1); hold on;
-                    plot(nx, theta, 'LineWidth', 1.1, 'DisplayName', ['particle ', num2str(pind)]);
+                    theta = reshape(squeeze(obj.param(prind, pind, :, :)), [], 1); 
+                    thetaProp = reshape(squeeze(obj.paramProp(prind, pind, :, :)), [], 1);
+                    hold on;
+                    plot(nx, theta, 'LineWidth', 1.1, 'DisplayName', ['particle ', num2str(pind)]); 
+                    % plot(nx, thetaProp,'LineWidth', 0.1);
                     grid on; grid minor;
                     xlabel('Iterations', 'FontSize', 12); 
                     ylabel(['$$\varphi_',num2str(prind),'$$'], 'FontSize', 20, 'Interpreter','latex');              
@@ -226,7 +246,8 @@ classdef classGenPlots < handle
                 fontsize(lgd, 12, 'points');
                 title(['Parameter ', num2str(prind)], 'FontSize', 14);                 
             end   
-            title(tl, 'Parameter Trajectories vs Iterations', 'FontSize', 16); 
+            title(tl, 'Parameter Trajectories vs Iterations', 'FontSize', 16);
+            linkaxes(ax, 'x');
 
         end
     end

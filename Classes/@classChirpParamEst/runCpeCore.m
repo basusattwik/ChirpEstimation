@@ -1,4 +1,4 @@
-function obj = runCpeCore(obj, params)
+function obj = runCpeCore(obj, params, noise)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -9,7 +9,7 @@ fs = obj.fs;
 
 % Avoiding divides
 nvecOverFs = obj.n / fs;
-twoPij  = 2*pi*1j;
+twoPij = 2*pi*1j;
 
 startInd = 1;
 for c = 1:Nc
@@ -35,22 +35,25 @@ for c = 1:Nc
     startInd = startInd + Ac(c);
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%                                         %
-% --- Projection & Annhialator Matrices ---
-%                                         %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                           %
+% --- Projection & Annhialator Matrices --- %
+%                                           %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Get the projection matrix and the orthogonal projection matrix
 obj.Hhat = (obj.H' * obj.H) \ obj.H'; 
 obj.P    = obj.H * obj.Hhat;
 obj.Po   = obj.Id - obj.P; % Can optimize
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%                             %
-% --- Gradient of J wrt phi ---
-%                             %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Objective function value: want to minimize this
+obj.J = real(obj.ym' * (obj.Po * obj.ym)); % Force it to be real to prevent tiny imaginary values ~ e-16
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                               %
+% --- Gradient of J wrt phi --- %
+%                               %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 k = 0;
 startInd = 1;
@@ -69,13 +72,5 @@ for c = 1:Nc
     end
     startInd = startInd + Ac(c);
 end
-
-% % Objective function value: want to minimize this
-% obj.J = real(obj.ym' * (obj.Po * obj.ym)); % Force it to be real to prevent tiny imaginary values ~ e-16
-% 
-% % Check if J is close to 0... that means we have converged
-% if obj.J <= obj.minObjTol
-%     obj.bMinFound = true;
-% end
 
 end

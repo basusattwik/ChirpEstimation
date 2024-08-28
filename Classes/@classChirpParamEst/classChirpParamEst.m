@@ -43,21 +43,22 @@ classdef classChirpParamEst < handle
         snr;      % Signal-to-Noise ratio in dB
 
         % Terms used in iterative estimation
-        J;        % Objective function value (scalar)
-        rhoEst;
+        J;          % Objective function value (scalar)
+        rhoEst;     
         rhoEstCell;
-        phiEst;   % Phase polynomial parameters array (1 x K)
+        phiEst;     % Phase polynomial parameters array (1 x K)
         phiEstCell; % Phase polynomial parameters in cell (1 x Nc)
-        H;        % Basis matrix (N x Nc)
-        Hhat;     % An important intermediate term (N x Nc)
-        P;        % Signal projection matrix
-        Po;       % Noise projection matrix
-        Id;       % Identity matrix used to compute Po = I - P;
-        bvec;     % Vector of amplitude & phase offsets
+        H;          % Basis matrix (N x Ka)
+        Hhat;       % An important intermediate term (N x Nc)
+        P;          % Signal projection matrix
+        Po;         % Noise projection matrix
+        Id;         % Identity matrix used to compute Po = I - P;
+        bvec;       % Vector of amplitude & phase offsets
 
         % Gradients
         dH_phi;   % Gradient of H wrt phi   (N x Nc x K)
         dJ_phi;   % Gradient of J wrt phi   (1 x K)
+        d2J_phi;  % Hessian of J wrt phi    (K x K)
 
         % Booleans
         bMinFound = false;

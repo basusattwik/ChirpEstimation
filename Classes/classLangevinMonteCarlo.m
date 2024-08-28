@@ -16,7 +16,7 @@ classdef classLangevinMonteCarlo < handle
         numIterNoise;
         numIterLmc;
         numIterLmcAndNoise;
-        numIterGradSmooth;
+        numIterSmooth;
         noiseVarInit;
         noiseVarFinal;
 
@@ -39,6 +39,8 @@ classdef classLangevinMonteCarlo < handle
         % Bools
         bDisplayPlots;
         bStopLmc;
+        bEnableGaussSmooth;
+        bEnableLangevin;
 
         % External
         cpe; % classChirpParamEst
@@ -52,6 +54,7 @@ classdef classLangevinMonteCarlo < handle
         saveTemper;
         savebAccept;
         saveStepSize;
+        saveProposedParams;
     end
 
     methods
@@ -72,7 +75,9 @@ classdef classLangevinMonteCarlo < handle
             obj.noiseVarInit  = tuning.noiseVarInit;
             obj.noiseVarFinal = tuning.noiseVarFinal; 
             obj.bDisplayPlots = tuning.bDisplayPlots;
-            obj.numIterGradSmooth = tuning.numIterGradSmooth;
+            obj.numIterSmooth = tuning.numIterSmooth;
+            obj.bEnableGaussSmooth  = tuning.bGaussSmooth;
+            obj.bEnableLangevin = tuning.bEnableLangevin;
 
             obj.stepSizeInit = zeros(obj.numParams, obj.numParticles);
             obj.stepSize     = zeros(obj.numParams, obj.numParticles);
@@ -97,7 +102,7 @@ classdef classLangevinMonteCarlo < handle
             obj.numIterLmcAndNoise = obj.numIterLmc * obj.numIterNoise;
 
             % Init state params and gradients
-            obj.param       = unifrnd(0, 100, obj.numParams, obj.numParticles);
+            obj.param       = unifrnd(-100, 100, obj.numParams, obj.numParticles);%
             obj.grads       = zeros(obj.numParams, obj.numParticles); 
             obj.avgGrads    = zeros(obj.numParams, obj.numParticles);
             obj.avgGradNorm = zeros(1, obj.numParticles);
@@ -114,6 +119,7 @@ classdef classLangevinMonteCarlo < handle
             obj.savebAccept     = zeros(obj.numParticles, obj.numIterLmc,   obj.numIterNoise);
             obj.saveObjFunc     = zeros(obj.numParticles, obj.numIterLmc,   obj.numIterNoise);
             obj.saveTemper      = zeros(obj.numIterLmc, obj.numIterNoise);
+            obj.saveProposedParams = zeros(obj.numParams, obj.numParticles, obj.numIterLmc, obj.numIterNoise);
 
             %  Call constructor of cpe class. Initialize several instances
             %  of the class... one for each particle
@@ -157,17 +163,19 @@ classdef classLangevinMonteCarlo < handle
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
                             % Gradient smoothing
-                            for sind = 1:obj.numIterGradSmooth
-                                obj.cpe{1,pind} = obj.cpe{1,pind}.runCpeCore(obj.param(:,pind) + obj.noiseVar(1, nind) .* randn(obj.numParams,1)); % This gives the gradients wrt all params for all particles
+                            for sind = 1:obj.numIterSmooth
+                                extraNoise = obj.bEnableGaussSmooth * obj.noiseVar(1,nind) .* randn(obj.numParams,1);
+                                paramNoisy = obj.param(:,pind) + extraNoise;
+                                obj.cpe{1,pind} = obj.cpe{1,pind}.runCpeCore(paramNoisy); % This gives the gradients wrt all params for all particles
                                 totalGrads = totalGrads + obj.cpe{1,pind}.dJ_phi.'; 
                             end
-                            obj.grads(:,pind) = (totalGrads / obj.numIterGradSmooth);
+                            obj.grads(:,pind) = (totalGrads / obj.numIterSmooth);
                             totalGrads(:) = 0;
 
                             % Objective function for current param for current particle
                             obj.cpe{1,pind}.J = obj.cpe{1,pind}.evalObjectiveFunc(obj.param(:,pind));  
                             if obj.cpe{1,pind}.J <= obj.cpe{1,pind}.minObjTol
-                                obj.cpe{1,pind}.bMinFound = true; % Check if J is close to 0... that means we have converged
+                                obj.cpe{1,pind}.bMinFound = true; % Check if J is small enough... that means we have converged
                             end
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                             %                            %
@@ -175,7 +183,7 @@ classdef classLangevinMonteCarlo < handle
                             %                            %
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
-                            % Compute gradient smoothing         
+                            % Compute gradient exp averaging         
                             obj.avgGrads(:,pind) = obj.avgConst .* obj.grads(:,pind) + (1 - obj.avgConst) .* obj.avgGrads(:,pind);
                             
                             % Keep track of average gradient norm
@@ -183,7 +191,7 @@ classdef classLangevinMonteCarlo < handle
                             obj.avgGradNorm(1,pind) = obj.avgConst .* abs(obj.gradNorm(1,pind)) + (1 - obj.avgConst) .* obj.avgGradNorm(1,pind);
                             
                             % Update stepsize
-                            obj.stepSize(:,pind) = stepSizeNum(:,pind) ./ (1e-3 + obj.stepSizeConst .* obj.avgGrads(:,pind).^2);
+                            obj.stepSize(:,pind) = stepSizeNum(:,pind) ./ (1 + obj.stepSizeConst .* obj.avgGrads(:,pind).^2);
                             
                             % Check if stepsize exceeds limits
                             for npr = 1:obj.numParams
@@ -199,7 +207,7 @@ classdef classLangevinMonteCarlo < handle
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
                             % Adjust the temperature
-                            obj.temper = obj.tempConst * log10(1 + (tind));
+                            obj.temper = 1; %obj.tempConst * log10(1 + (tind));
 
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                             %                              %
@@ -209,7 +217,9 @@ classdef classLangevinMonteCarlo < handle
 
                             % Do Langevin updates on all params to get a new proposed point
                             paramProp = obj.param(:,pind) - obj.stepSize(:,pind) .* obj.grads(:,pind) + ...
-                                                            sqrt(2 * obj.stepSize(:,pind) ./ obj.temper) .* randn(obj.numParams,1);
+                                                            obj.bEnableLangevin * sqrt(2 * obj.stepSize(:,pind) ./ obj.temper) .* randn(obj.numParams,1);
+
+                            obj.saveProposedParams(:,pind, tind, nind) = paramProp;
 
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                             %                                   %
@@ -225,6 +235,9 @@ classdef classLangevinMonteCarlo < handle
                             else
                                 bAccept = false;
                             end
+
+                            % Add proposal density
+
 
                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                             %                                %
@@ -312,7 +325,8 @@ classdef classLangevinMonteCarlo < handle
 
                 [~, minObjFuncInd] = min(objFuncVals);
                 obj.optParam = obj.param(:, minObjFuncInd);
-                disp(['The optimum chirp parameters are =  ', num2str(obj.optParam.')]);
+                disp(['The optimum chirp parameters = ', num2str(obj.optParam.')]);
+                disp(['Found by particle ', num2str(minObjFuncInd)]);
 
                 % Finally, compute the scalar gains for CPE
                 obj.cpe{1,minObjFuncInd} = obj.cpe{1,minObjFuncInd}.compScalarGains(obj.optParam);   
