@@ -9,14 +9,14 @@ clearvars
 % This has the effect of Gaussian smoothing the gradients
 %% Create a chirp
 
-fs = 300;
-Td = 1;
+fs = 100;
+Td = 0.5;
 Nc = 1; 
 snr = 60;
 N = Td * fs;
 
 % Parameters
-f0 = 60;
+f0 = 20;
 tind  = (0:1/fs:Td-1/fs).';
 
 x  = exp(2*pi*1j * f0*tind);
@@ -24,7 +24,7 @@ y = addGaussianNoise(x, snr);
 
 % 1. Grid of parameters
 df = 0.01;
-f  = 50:df:70;
+f  = 10:df:30;
 
 J  = zeros(numel(f),1);
 dJ = zeros(numel(f),1);
@@ -62,34 +62,57 @@ J_filt  = conv(w, J,  "same");
 
 %% Actual Smoothing algorithm
 
-I = eye(N);
+sigma_gauss  = 1;
+
 numSmoothing = 50;
 
 J_gs  = zeros(numel(f),1);
 dJ_gs = zeros(numel(f),1);
+ddJ_gs = zeros(numel(f),1);
 
-J_temp  = 0;
-dJ_temp = 0;
-sigma_gauss = 2;
+J_temp_noisy   = 0;
+dJ_temp_noisy  = 0;
+ddJ_temp_noisy = 0;
+I = eye(N);
+
 for find = 1:numel(f)
+
+    f_curr  = f(find);
+    H  = exp(2*pi*1j * f_curr * tind);
+    P  = H * (H' * H)^(-1) * H';
+    Po = I - P;
+    dH = 2*pi*1j .* tind .* H;
+
+    J_curr = real(y' * (Po * y));
 
     for sind = 1:numSmoothing
 
-        f_noisy = f(find) + sigma_gauss * randn(1,1);
+        u = randn(1,1);
+        f_noisy = f(find) + sigma_gauss * u;
 
-        H  = exp(2*pi*1j * f_noisy * tind);
-        P  = H * (H' * H)^(-1) * H';
-        Po = I - P;
-        dH = 2*pi*1j .* tind .* H;
+        H_noisy  = exp(2*pi*1j * f_noisy * tind);
+        P_noisy  = H_noisy * (H_noisy' * H_noisy)^(-1) * H_noisy';
+        Po_noisy = I - P_noisy;
+        dH_noisy = 2*pi*1j .* tind .* H_noisy;
 
-        J_temp = J_temp + real(y' * (Po * y));
-        dJ_temp = dJ_temp + -2*real(y' * (Po * (dH * ((H' * H)^(-1) * (H' * y)))));
+        % Function at the perturbed point
+        J_noisy = real(y' * (Po_noisy * y));
+        J_temp_noisy = J_temp_noisy + J_noisy;
 
+        % Gradient at perturbed point
+        dJ_temp_noisy = dJ_temp_noisy + -2*real(y' * (Po_noisy * (dH_noisy * ((H_noisy' * H_noisy)^(-1) * (H_noisy' * y)))));
+
+        % Hessian at perturbed point
+        ddJ_temp_noisy = ddJ_temp_noisy + (1/sigma_gauss^2) * (u^2 - 1) * (J_noisy - J_curr);
     end
-    J_gs(find)  = J_temp / numSmoothing;
-    dJ_gs(find) = dJ_temp / numSmoothing;
-    dJ_temp = 0;
-    J_temp = 0;
+
+    J_gs(find)   = J_temp_noisy   / numSmoothing;
+    dJ_gs(find)  = dJ_temp_noisy  / numSmoothing;
+    ddJ_gs(find) = ddJ_temp_noisy / numSmoothing;
+    
+    J_temp_noisy   = 0;
+    dJ_temp_noisy  = 0;
+    ddJ_temp_noisy = 0;
 end
 
 % Plots
@@ -118,7 +141,16 @@ ax2 = nexttile;
     title('Gradient for a sine tone at 60 Hz');
     legend('Actual', 'Gaussian Smoothed');
     grid on; grid minor;
-linkaxes([ax1, ax2]);
+
+ax3 = nexttile;
+    plot(f, ddJ,  'LineWidth', 1.5); hold on;
+    plot(f, (ddJ_gs), 'LineWidth',1.5)
+    xlabel('Frequency (Hz)');
+    ylabel('Hessian');
+    title('Hessian for a sine tone at 60 Hz');
+    legend('Actual', 'Gaussian Smoothed');
+    grid on; grid minor;
+linkaxes([ax1, ax2, ax3]);
 
 %% Helpers
 

@@ -73,4 +73,12 @@ for c = 1:Nc
     startInd = startInd + Ac(c);
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                              %
+% --- Hessian of J wrt phi --- %
+%                              %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
 end
