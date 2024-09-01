@@ -9,22 +9,22 @@ clearvars
 % This has the effect of Gaussian smoothing the gradients
 %% Create a chirp
 
-fs = 100;
-Td = 0.5;
+fs = 2000;
+Td = 0.05;
 Nc = 1; 
-snr = 60;
+snr = 6;
 N = Td * fs;
 
 % Parameters
-f0 = 20;
+f0 = 60;
 tind  = (0:1/fs:Td-1/fs).';
 
 x  = exp(2*pi*1j * f0*tind);
 y = addGaussianNoise(x, snr);
 
 % 1. Grid of parameters
-df = 0.01;
-f  = 10:df:30;
+df = 0.1;
+f  = 0:df:100;
 
 J  = zeros(numel(f),1);
 dJ = zeros(numel(f),1);
@@ -38,8 +38,6 @@ for find = 1:numel(f)
     J(find)  = real(y' * (Po * y));
     dJ(find) = -2*real(y' * (Po * (dH * ((H' * H)^(-1) * (H' * y)))));
 end
-
-
 
 h = 1;
 ddJ = zeros(numel(f),1);
@@ -74,16 +72,8 @@ J_temp_noisy   = 0;
 dJ_temp_noisy  = 0;
 ddJ_temp_noisy = 0;
 I = eye(N);
-
+% 
 for find = 1:numel(f)
-
-    f_curr  = f(find);
-    H  = exp(2*pi*1j * f_curr * tind);
-    P  = H * (H' * H)^(-1) * H';
-    Po = I - P;
-    dH = 2*pi*1j .* tind .* H;
-
-    J_curr = real(y' * (Po * y));
 
     for sind = 1:numSmoothing
 
@@ -103,21 +93,61 @@ for find = 1:numel(f)
         dJ_temp_noisy = dJ_temp_noisy + -2*real(y' * (Po_noisy * (dH_noisy * ((H_noisy' * H_noisy)^(-1) * (H_noisy' * y)))));
 
         % Hessian at perturbed point
-        ddJ_temp_noisy = ddJ_temp_noisy + (1/sigma_gauss^2) * (u^2 - 1) * (J_noisy - J_curr);
+        ddJ_temp_noisy = ddJ_temp_noisy + (1/sigma_gauss^2) * (u^2 - 1) * J_noisy;
     end
 
     J_gs(find)   = J_temp_noisy   / numSmoothing;
     dJ_gs(find)  = dJ_temp_noisy  / numSmoothing;
     ddJ_gs(find) = ddJ_temp_noisy / numSmoothing;
-    
+
     J_temp_noisy   = 0;
     dJ_temp_noisy  = 0;
     ddJ_temp_noisy = 0;
 end
 
+% for find = 1:numel(f)
+% 
+%     f_curr  = f(find);
+%     H  = exp(2*pi*1j * f_curr * tind);
+%     P  = H * (H' * H)^(-1) * H';
+%     Po = I - P;
+%     dH = 2*pi*1j .* tind .* H;
+% 
+%     J_curr = real(y' * (Po * y));
+% 
+%     for sind = 1:numSmoothing
+% 
+%         u = randn(1,1);
+%         f_noisy = f(find) + sigma_gauss * u;
+% 
+%         H_noisy  = exp(2*pi*1j * f_noisy * tind);
+%         P_noisy  = H_noisy * (H_noisy' * H_noisy)^(-1) * H_noisy';
+%         Po_noisy = I - P_noisy;
+%         dH_noisy = 2*pi*1j .* tind .* H_noisy;
+% 
+%         % Function at the perturbed point
+%         J_noisy = real(y' * (Po_noisy * y));
+%         J_temp_noisy = J_temp_noisy + J_noisy;
+% 
+%         % Gradient at perturbed point
+%         dJ_temp_noisy = dJ_temp_noisy + -2*real(y' * (Po_noisy * (dH_noisy * ((H_noisy' * H_noisy)^(-1) * (H_noisy' * y)))));
+% 
+%         % Hessian at perturbed point
+%         ddJ_temp_noisy = ddJ_temp_noisy + (1/sigma_gauss^2) * (u^2 - 1) * (J_noisy - J_curr);
+%     end
+% 
+%     J_gs(find)   = J_temp_noisy   / numSmoothing;
+%     dJ_gs(find)  = dJ_temp_noisy  / numSmoothing;
+%     ddJ_gs(find) = ddJ_temp_noisy / numSmoothing;
+% 
+%     J_temp_noisy   = 0;
+%     dJ_temp_noisy  = 0;
+%     ddJ_temp_noisy = 0;
+% end
+
 % Plots
 
-close all
+% close all
 figure('windowstyle','docked');
     plot(f,w);
 

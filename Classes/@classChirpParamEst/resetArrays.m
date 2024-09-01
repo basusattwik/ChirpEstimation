@@ -29,7 +29,8 @@ obj.Po      = zeros(obj.N,  obj.N);
 obj.dH_phi  = zeros(obj.N,  obj.Ka, obj.Kp - obj.Nc);
 obj.dJ_phi  = zeros(1, obj.Kp - obj.Nc);
 obj.d2J_phi = zeros(obj.Kp - obj.Nc, obj.Kp - obj.Nc);
-obj.Id      = eye(obj.N, obj.N);
+obj.Idn     = eye(obj.N, obj.N);
+obj.Idk     = eye(obj.Ka, obj.Ka);
 
 
 end

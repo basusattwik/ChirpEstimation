@@ -35,7 +35,7 @@ end % -- end loop over number of samples
 
 obj.xm = obj.am .* obj.em;
 
-% Combined to form multicomponent signal
+% Combined to form multicomponent signal 
 obj.ym = sum(obj.xm, 2);
 
 end

@@ -16,7 +16,8 @@ wsc = (obj.wm ./ sqrt(wpow)) .* sqrt(pn); % normalizing the noisy signal to get 
 
 obj.ym = obj.ym + wsc; % add noise to signal
 
-% wnewpow = sum(abs(wscaled.^2));
-% snrtrue = 10*log10(ypow / wnewpow);
+wnewpow = sum(abs(wsc.^2));
+nrtrue = 10*log10(ypow / wnewpow);
 
 end
+

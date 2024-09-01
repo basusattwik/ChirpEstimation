@@ -1,4 +1,4 @@
-function obj = runCpeCore(obj, params, noise)
+function obj = runCpeCore(obj, params)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -42,9 +42,9 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Get the projection matrix and the orthogonal projection matrix
-obj.Hhat = (obj.H' * obj.H) \ obj.H'; 
+obj.Hhat = (obj.H' * obj.H + obj.gamma * obj.Idk) \ obj.H'; 
 obj.P    = obj.H * obj.Hhat;
-obj.Po   = obj.Id - obj.P; % Can optimize
+obj.Po   = obj.Idn - obj.P; % Can optimize
 
 % Objective function value: want to minimize this
 obj.J = real(obj.ym' * (obj.Po * obj.ym)); % Force it to be real to prevent tiny imaginary values ~ e-16

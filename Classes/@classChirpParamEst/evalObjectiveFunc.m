@@ -37,8 +37,8 @@ for c = 1:Nc
 end
 
 % Get the projection matrix and the orthogonal projection matrix
-P  = H * ((H' * H) \ H'); 
-Po = obj.Id - P;
+P  = H * ((H' * H + obj.gamma * obj.Idk) \ H'); 
+Po = obj.Idn - P;
 
 % Objective function value
 J = real(ym' * (Po * ym));

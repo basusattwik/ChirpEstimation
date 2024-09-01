@@ -10,6 +10,9 @@ classdef classChirpParamEst < handle
         Nc = 2;    % Number of Chirps
         N  = 1000; % Total number of samples (fs * Td)
 
+        % Tuning
+        gamma;
+
         % Indexing
         n;        % Sample indexing vector from 0:N-1
         c;        % Chirp index
@@ -52,7 +55,8 @@ classdef classChirpParamEst < handle
         Hhat;       % An important intermediate term (N x Nc)
         P;          % Signal projection matrix
         Po;         % Noise projection matrix
-        Id;         % Identity matrix used to compute Po = I - P;
+        Idn;         % Identity matrix used to compute Po = I - P;
+        Idk;
         bvec;       % Vector of amplitude & phase offsets
 
         % Gradients
@@ -81,6 +85,7 @@ classdef classChirpParamEst < handle
             obj.rho   = cpeSetting.rho;
             obj.snr   = cpeSetting.snr;
             obj.minObjTol = cpeSetting.minObjTol;
+            obj.gamma = cpeSetting.gamma;
             
             obj.N = obj.fs * obj.Td;
             obj.n = (0:obj.N-1).';

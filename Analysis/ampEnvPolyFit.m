@@ -4,12 +4,12 @@ clearvars
 
 fx = @ (x, b, g) exp(-b * x) .* (1 - exp(-g * x));
 
-fs = 100;
+fs = 500;
 T  = 1;
 N  = fs * T;
 t  = 0:1/fs:T-1/fs;
-b  = 4;
-g  = 20;
+b  = 8;
+g  = 5;
 
 f = fx(t,b,g);
 
