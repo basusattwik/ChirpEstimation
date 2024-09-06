@@ -50,6 +50,7 @@ classdef classLangevinMonteCarlo_SL < handle
         bEnableLangevin;
         bInitParamGiven;
         bStopSim;
+        bMetropolisOn; 
 
         % External
         cpe; % classChirpParamEst
@@ -66,6 +67,9 @@ classdef classLangevinMonteCarlo_SL < handle
         saveNoiseVar;
         saveProposedParams;
         saveHessTrc;
+
+        % Error analysis
+        sqrError;
         
     end
 
@@ -89,6 +93,7 @@ classdef classLangevinMonteCarlo_SL < handle
             obj.numIterSmooth = tuning.numIterSmooth;
             obj.bEnableGaussSmooth = tuning.bGaussSmooth;
             obj.bEnableLangevin = tuning.bEnableLangevin;
+            obj.bMetropolisOn = tuning.bMetropolisOn;
             obj.initValMinMax = tuning.initValMinMax;
 
             % Init tuning param arrays
@@ -98,6 +103,7 @@ classdef classLangevinMonteCarlo_SL < handle
             obj.temper       = zeros(1, 1);
             obj.noiseVar     = zeros(1, obj.numParticles);
             obj.bestParticleInd  = [];
+            obj.sqrError = zeros(obj.numParams, 1);
             
             for pind = 1:obj.numParticles
                 obj.stepSizeInit(:,pind) = tuning.stepSize(1:obj.numParams);
@@ -115,7 +121,15 @@ classdef classLangevinMonteCarlo_SL < handle
             if ~isempty(tuning.initParams)
                 obj.param = tuning.initParams;
             else
-                obj.param = unifrnd(obj.initValMinMax(1), obj.initValMinMax(2), obj.numParams, obj.numParticles); %[30, 57, 59.3];
+
+                if setup.Nc == 1
+                    obj.param = unifrnd(obj.initValMinMax(1), obj.initValMinMax(2), obj.numParams, obj.numParticles); %[30, 57, 59.3];
+                else
+                    for prind = 1:obj.numParams/2
+                        obj.param(prind,:)   = unifrnd(obj.initValMinMax(prind, 1), obj.initValMinMax(prind, 2), 1, obj.numParticles);
+                        obj.param(prind+obj.numParams/2,:) = unifrnd(obj.initValMinMax(prind, 1), obj.initValMinMax(prind, 2), 1, obj.numParticles);
+                    end
+                end
             end
 
             % obj.param       = normrnd(obj.initValMinMax(1), obj.initValMinMax(2), obj.numParams, obj.numParticles);
@@ -157,6 +171,7 @@ classdef classLangevinMonteCarlo_SL < handle
         obj = runLmcCore_SL(obj);
         ax  = initLivePlots_SL(obj);
         []  = updateLivePlots_SL(obj, tind, ax);
+        obj = evalErrors(obj);
 
     end
 end

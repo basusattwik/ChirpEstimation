@@ -40,6 +40,14 @@ classdef classChirpParamEst < handle
         wm;       % White Gaussian noise at specified snr (N x 1)
         fim;      % Instantaneous frequency
 
+        % Generated signals
+        amRecon;       % Chirp amplitude envelopes (N x Nc)
+        emRecon;       % Chirps without amplitude envelope (N x Nc)
+        umRecon;       % Chirps with amplitude envelepe (N x Nc)
+        xmRecon;       % Clean mixture of chirps (N x 1)
+        ymRecon;       % Noisy mixture of chirps (N x 1)
+        fimRecon;      % Instantaneous frequency
+
         % Chirp properties (settings)
         phi;      % Phase polynomial parameters (1 x Nc but cell array)
         rho;      % Amplitude polynomial parameters (1 x Nc but cell array)
@@ -51,6 +59,7 @@ classdef classChirpParamEst < handle
         rhoEstCell;
         phiEst;     % Phase polynomial parameters array (1 x K)
         phiEstCell; % Phase polynomial parameters in cell (1 x Nc)
+        phi0Est;
         H;          % Basis matrix (N x Ka)
         Hhat;       % An important intermediate term (N x Nc)
         P;          % Signal projection matrix
@@ -66,6 +75,7 @@ classdef classChirpParamEst < handle
 
         % Booleans
         bMinFound = false;
+        bApplyWin = false;
 
         % Tolerances
         minObjTol;
@@ -85,7 +95,8 @@ classdef classChirpParamEst < handle
             obj.rho   = cpeSetting.rho;
             obj.snr   = cpeSetting.snr;
             obj.minObjTol = cpeSetting.minObjTol;
-            obj.gamma = cpeSetting.gamma;
+            obj.gamma     = cpeSetting.gamma;
+            obj.bApplyWin = cpeSetting.bApplyWin;
             
             obj.N = obj.fs * obj.Td;
             obj.n = (0:obj.N-1).';
@@ -123,11 +134,12 @@ classdef classChirpParamEst < handle
         % Computational steps
         obj = compObjectiveFunc(obj);
         obj = evalObjectiveFunc(obj, params);
-        obj = compBasisSignals(obj);
-        obj = compBasisMatrix(obj);
-        obj = compProjMatrix(obj);
-        obj = compAllGradients(obj);
+        % obj = compBasisSignals(obj);
+        % obj = compBasisMatrix(obj);
+        % obj = compProjMatrix(obj);
+        % obj = compAllGradients(obj);
         obj = compScalarGains(obj, params);
+        obj = reconChirpSignals(obj)
 
         % The process function
         obj = runCpeCore(obj, params);

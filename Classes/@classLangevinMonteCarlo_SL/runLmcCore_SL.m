@@ -34,6 +34,15 @@ function obj = runLmcCore_SL(obj)
                 % Gradient smoothing and Hessian approximation
                 for sind = 1:obj.numIterSmooth
 
+                    % Update waitbar and message
+                    if getappdata(wbar, 'canceling')
+                        disp('Simulation cancelled!')
+            
+                        obj.bStopSim = true;
+                        delete(wbar);
+                        return
+                    end 
+
                     normRand   = randn(obj.numParams,1);
                     extraNoise = obj.bEnableGaussSmooth * obj.noiseVar(1,pind) .* normRand;
                     paramNoisy = obj.param(:,pind) + extraNoise;
@@ -76,8 +85,12 @@ function obj = runLmcCore_SL(obj)
                 obj.avgGradNorm(1,pind) = obj.avgConst .* abs(obj.gradNorm(1,pind)) + (1 - obj.avgConst) .* obj.avgGradNorm(1,pind);
                 
                 % Update stepsize
-                obj.stepSize(:,pind) = (obj.stepSizeInit(:,pind) .* (obj.noiseVar(1, pind) / obj.noiseVarMin)^2) ./ (1e-4 + obj.stepSizeConst .* (obj.avgGrads(:,pind).^2));
-                
+                if obj.bEnableGaussSmooth
+                    obj.stepSize(:,pind) = (obj.stepSizeInit(:,pind) .* (obj.noiseVar(1, pind) / obj.noiseVarMin)^2) ./ (1e-4 + obj.stepSizeConst .* (obj.avgGrads(:,pind).^2));
+                else
+                   obj.stepSize(:,pind) = obj.stepSizeInit(:,pind) ./ (1e-4 + obj.stepSizeConst .* (obj.avgGrads(:,pind).^2));
+                end
+
                 % Check if stepsize exceeds limits
                  obj.stepSize = max(obj.stepSizeMin, min(obj.stepSizeMax, obj.stepSize));
 
@@ -88,21 +101,27 @@ function obj = runLmcCore_SL(obj)
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%             
 
                 % Adjust the temperature
-                obj.temper = obj.tempConst * log10(1 + (tind));
+                obj.temper = obj.tempConst;% * log10(1 + (tind));
 
                 % Do Langevin updates on all params to get a new proposed point
-                paramProp = obj.param(:,pind) - obj.stepSize(:,pind) .* obj.avgGrads(:,pind) + ...
-                                                obj.bEnableLangevin * sqrt(2 * obj.stepSize(:,pind) ./ obj.temper) .* randn(obj.numParams,1);
+                paramProp = obj.param(:,pind) - obj.stepSize(:,pind) .*  obj.temper .* obj.avgGrads(:,pind) + ...
+                                                obj.bEnableLangevin * sqrt(2 * obj.stepSize(:,pind)) .* randn(obj.numParams,1);
 
-                % obj.param(:,pind) = paramProp;
-                funcRatio = exp(obj.temper * (currentFuncVal - obj.cpe{1,pind}.evalObjectiveFunc(paramProp)));
-                alpha     = min(1, funcRatio);
-                unifRand  = rand; % ~ Unif[0,1]
-                if unifRand <= alpha
+                
+                % Metropolis correction
+                if obj.bMetropolisOn 
+                    funcRatio = exp(obj.temper * (currentFuncVal - obj.cpe{1,pind}.evalObjectiveFunc(paramProp)));
+                    alpha     = min(1, funcRatio);
+                    unifRand  = rand; % ~ Unif[0,1]
+                    if unifRand <= alpha
+                        obj.param(:,pind) = paramProp;
+                        obj.bAccept(1,pind) = true;
+                    else
+                        obj.bAccept(1,pind) = false;
+                    end
+                else
                     obj.param(:,pind) = paramProp;
                     obj.bAccept(1,pind) = true;
-                else
-                    obj.bAccept(1,pind) = false;
                 end
                 obj.saveProposedParams(:,pind, tind) = paramProp;
 
@@ -125,20 +144,6 @@ function obj = runLmcCore_SL(obj)
 
             end % end numParticles
 
-            %%%%%%%%%%%%%%%%%%%
-            %                 %
-            % --- Waitbar --- %
-            %                 %
-            %%%%%%%%%%%%%%%%%%%
-
-            % Update waitbar and message
-            if getappdata(wbar, 'canceling')
-                disp('Simulation cancelled!')
-
-                obj.bStopSim = true;
-                delete(wbar);
-                return
-            end    
             if mod(tind, 10) == 0
                 
                 waitbar(tind / obj.numIterLmc, wbar, ['LMC Iteration: ', num2str(tind), '/', num2str(obj.numIterLmc)]);
@@ -163,11 +168,11 @@ function obj = runLmcCore_SL(obj)
         %                                                     %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
-        % Get the time index for which the param led to the lowest objective func value
-        for pind = 1:obj.numParticles
-            [~, minObjLmcInd] = min(obj.saveObjFunc(pind, :));
-            obj.param(:,pind) = obj.saveParams(:,pind, minObjLmcInd); % This is the starting point for the next round of LMC updates
-        end
+        % % Get the time index for which the param led to the lowest objective func value
+        % for pind = 1:obj.numParticles
+        %     [~, minObjLmcInd] = min(obj.saveObjFunc(pind, :));
+        %     obj.param(:,pind) = obj.saveParams(:,pind, minObjLmcInd); % This is the starting point for the next round of LMC updates
+        % end
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %                                           %
@@ -183,21 +188,27 @@ function obj = runLmcCore_SL(obj)
         [~, obj.bestParticleInd] = min(objFuncVals);
         obj.optParam = obj.param(:, obj.bestParticleInd);
 
-        fprintf('\n');
-        disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-        disp(['The optimum chirp parameters are =  ', num2str(obj.optParam.')]);
-        disp(['Found by particle ', num2str(obj.bestParticleInd)]);
-        fprintf('\n');
-
         % Finally, compute the scalar gains for CPE
         obj.cpe{1,obj.bestParticleInd} = obj.cpe{1,obj.bestParticleInd}.compScalarGains(obj.optParam);   
 
-        % Store best particle index
-        % Compute b vector (amp and phase too)
+        % Reconstruct the chirp from the estimated parameters
+        obj.cpe{1,obj.bestParticleInd} = obj.cpe{1,obj.bestParticleInd}.reconChirpSignals();
+
+        % Evaluate errors in estimation
+        obj = evalErrors(obj);
 
         % Housekeeping
         disp('Simulation complete!')
         delete(wbar);
+
+        fprintf('\n');
+        disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+        disp(['The optimum chirp parameters are =  ', num2str(obj.optParam.')]);
+        disp(['Found by particle ', num2str(obj.bestParticleInd)]);
+        disp(['Log Error for params = ', num2str(log10(obj.sqrError.'))]);
+        disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+        fprintf('\n');
+
 
     catch me
         delete(wbar); % Close wait bar when simulation errors out

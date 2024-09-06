@@ -14,7 +14,7 @@ for i = 1:numel(subfolders)
 end
 
 % Add folders to MATLAB path
-folders = {'Generate', 'Simulations', 'Helpers', 'Examples', 'Experiments', 'Classes', 'Analysis'};
+folders = {'Generate', 'Simulations', 'Helpers', 'Examples', 'Experiments', 'Classes', 'Analysis', 'BasicPlots', 'Baselines'};
 for i = 1:numel(folders)
     addpath(genpath(folders{i}));
 end

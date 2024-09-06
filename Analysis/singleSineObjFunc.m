@@ -9,8 +9,8 @@ clearvars
 % This has the effect of Gaussian smoothing the gradients
 %% Create a chirp
 
-fs = 2000;
-Td = 0.05;
+fs = 600;
+Td = 0.5;
 Nc = 1; 
 snr = 6;
 N = Td * fs;

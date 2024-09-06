@@ -44,4 +44,12 @@ obj.rhoEst = abs(obj.bvec);
 % Get phase (phi_0)
 phi0 = angle(obj.bvec);
 
+startInd = 1;
+for c = 1:Nc
+    endInd   = startInd + Ac(c) - 1;
+    obj.rhoEstCell{1,c} = obj.rhoEst(startInd:endInd);
+    obj.phi0Est(1,c) = mean(phi0(startInd:endInd));
+    startInd = startInd + Ac(c);
+end
+
 end

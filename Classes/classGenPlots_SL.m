@@ -13,6 +13,7 @@ classdef classGenPlots_SL < handle
                         'envelope',   [], ...
                         'chirpComponents', [], ...
                         'chirpMixed', [], ...
+                        'chirpRecon', [], ...
                         'instFreq',   []);
         param;
         stepSize;
@@ -43,6 +44,7 @@ classdef classGenPlots_SL < handle
             obj.chirps.numSamples = simClass.cpe{1,1}.N;
             obj.chirps.numChirps  = simClass.cpe{1,1}.Nc;
             obj.chirps.chirpMixed = simClass.cpe{1,1}.ym;
+            obj.chirps.chirpRecon = simClass.cpe{1,simClass.bestParticleInd}.ymRecon;
             obj.chirps.chirpComponents = simClass.cpe{1,1}.xm;
             obj.chirps.instFreq   = simClass.cpe{1,1}.fim;
 
@@ -74,6 +76,7 @@ classdef classGenPlots_SL < handle
             Nc = obj.chirps.numChirps;
             xm = obj.chirps.chirpComponents;
             ym = obj.chirps.chirpMixed;
+            ymRecon = obj.chirps.chirpRecon;
             fim = obj.chirps.instFreq;
             bAc = obj.bAccept;
 
@@ -199,7 +202,6 @@ classdef classGenPlots_SL < handle
             legend('show', 'Location', 'best');
 
 
-
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             %                              %
             % --- Plotting Temperature --- %
@@ -254,7 +256,7 @@ classdef classGenPlots_SL < handle
                     grid on; grid minor;
                     xlabel('Iterations', 'FontSize', 12); 
                     ylabel(['$$\varphi_',num2str(prind),'$$'], 'FontSize', 20, 'Interpreter','latex');
-                    ylim([obj.yAxisMin, obj.yAxisMax]);
+                    % ylim([obj.yAxisMin, obj.yAxisMax]);
                 end
                 lgd = legend('show', 'Location', 'best');
                 fontsize(lgd, 12, 'points');
@@ -277,7 +279,21 @@ classdef classGenPlots_SL < handle
                 ylabel('$$\sigma$$', 'FontSize', 20, 'Interpreter','latex'); 
                 title('Noise Variance ', 'FontSize', 14);     
             end
-            legend('show', 'Location', 'best');            
+            legend('show', 'Location', 'best');       
+
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %                                       %
+            % --- Plotting Reconstructed Chirps --- %
+            %                                       %
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            figure('windowstyle','docked');
+                plot(tx, real(ym), 'LineWidth', 1.3, 'DisplayName', 'Actual'); hold on;
+                plot(tx, real(ymRecon), 'LineWidth', 1.3, 'DisplayName', 'Reconstructed');
+                grid on; grid minor;
+                xlabel('Time (s)', 'FontSize', 12);
+                ylabel('Frequency (Hz)', 'FontSize', 12);
+                title('Chirp reconstruction vs Time', 'FontSize', 14);
+                legend('show');
             
         end
     end

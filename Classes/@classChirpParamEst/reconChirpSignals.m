@@ -1,4 +1,4 @@
-function obj = genChirpSignal(obj)
+function obj = reconChirpSignals(obj)
 %GENCHIRPSIGNAL Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -14,9 +14,9 @@ oneOverFs = 1 / fs;
 % Calculate the polynomial chirp (NOT vectorized... but does not run in loops)
 for c = 1:Nc  % -- loop over number of chirps
 
-    rho  = obj.rho{1,c};
-    phi0 = obj.phi{1,c}(1,1);
-    phi  = obj.phi{1,c}(2:end,1);
+    rho  = obj.rhoEstCell{1,c};
+    phi0 = obj.phi0Est(1,c);
+    phi  = obj.phiEstCell{1,c};
 
     for nind = 1:N % -- loop over number of samples
 
@@ -26,22 +26,16 @@ for c = 1:Nc  % -- loop over number of chirps
         nfvec = ((nind-1) * oneOverFs).^(0:Pc(c)-2);
         navec = ((nind-1) * oneOverFs).^(0:Ac(c)-1);
 
-        obj.am(nind, c) = navec  * rho;
-        obj.fim(nind,c) = nfvec  * ((1:Pc(c)-1).' .* phi);
-        obj.em(nind, c) = exp(1j * (phi0 + 2*pi .* (npvec * phi))); % exp(j * phi_0 + 2pij * phi(t))
+        obj.amRecon(nind, c) = navec  * rho;
+        obj.fimRecon(nind,c) = nfvec  * ((1:Pc(c)-1).' .* phi);
+        obj.emRecon(nind, c) = exp(1j * (phi0 + 2*pi .* (npvec * phi))); % exp(j * phi_0 + 2pij * phi(t))
 
     end % -- end loop over number of chirps
 end % -- end loop over number of samples
 
-if sum(double(obj.fim(:,c)) >= fs/2) > 0
-    error('Instantaneous frequency exceeding Nyquist!');
-end
-
-obj.xm = obj.am .* obj.em;
+obj.xmRecon = obj.amRecon .* obj.emRecon;
 
 % Combined to form multicomponent signal 
-obj.ym = sum(obj.xm, 2);
+obj.ymRecon = sum(obj.xmRecon, 2);
 
 end
-
-
