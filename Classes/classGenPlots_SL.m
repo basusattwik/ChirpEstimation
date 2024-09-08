@@ -44,7 +44,7 @@ classdef classGenPlots_SL < handle
             obj.chirps.numSamples = simClass.cpe{1,1}.N;
             obj.chirps.numChirps  = simClass.cpe{1,1}.Nc;
             obj.chirps.chirpMixed = simClass.cpe{1,1}.ym;
-            obj.chirps.chirpRecon = simClass.cpe{1,simClass.bestParticleInd}.ymRecon;
+            % obj.chirps.chirpRecon = simClass.cpe{1,simClass.bestParticleInd}.ymRecon;
             obj.chirps.chirpComponents = simClass.cpe{1,1}.xm;
             obj.chirps.instFreq   = simClass.cpe{1,1}.fim;
 
@@ -76,7 +76,7 @@ classdef classGenPlots_SL < handle
             Nc = obj.chirps.numChirps;
             xm = obj.chirps.chirpComponents;
             ym = obj.chirps.chirpMixed;
-            ymRecon = obj.chirps.chirpRecon;
+            % ymRecon = obj.chirps.chirpRecon;
             fim = obj.chirps.instFreq;
             bAc = obj.bAccept;
 
@@ -285,16 +285,16 @@ classdef classGenPlots_SL < handle
             %                                       %
             % --- Plotting Reconstructed Chirps --- %
             %                                       %
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            figure('windowstyle','docked');
-                plot(tx, real(ym), 'LineWidth', 1.3, 'DisplayName', 'Actual'); hold on;
-                plot(tx, real(ymRecon), 'LineWidth', 1.3, 'DisplayName', 'Reconstructed');
-                grid on; grid minor;
-                xlabel('Time (s)', 'FontSize', 12);
-                ylabel('Frequency (Hz)', 'FontSize', 12);
-                title('Chirp reconstruction vs Time', 'FontSize', 14);
-                legend('show');
-            
+            % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            % figure('windowstyle','docked');
+            %     plot(tx, real(ym), 'LineWidth', 1.3, 'DisplayName', 'Actual'); hold on;
+            %     plot(tx, real(ymRecon), 'LineWidth', 1.3, 'DisplayName', 'Reconstructed');
+            %     grid on; grid minor;
+            %     xlabel('Time (s)', 'FontSize', 12);
+            %     ylabel('Frequency (Hz)', 'FontSize', 12);
+            %     title('Chirp reconstruction vs Time', 'FontSize', 14);
+            %     legend('show');
+            % 
         end
     end
 end

@@ -79,6 +79,10 @@ classdef classChirpParamEst < handle
 
         % Tolerances
         minObjTol;
+
+        % Errors
+        sqrPhiError;
+        sqrRhoError;
         
     end
 
@@ -146,6 +150,9 @@ classdef classChirpParamEst < handle
 
         % Helper functions
         obj = convertGradJArray2Cell(obj);
+
+        % Error Analysis
+        obj = evalParamErrors(obj);
 
     end
 end

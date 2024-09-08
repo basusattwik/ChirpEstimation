@@ -7,63 +7,68 @@ clc
 % Vanilla Langevin Monte Carlo
 
 %% 
+exptName = 'GS_LMC_Test';
+snr = [3, 6, 9];
 
-% Runs
-numOptRuns = 2;
+% Runs #
+numSnrRuns  = numel(snr);
+numStatRuns = 5;
+numOptRuns  = 2;
 
-% Setup Chirp parameters
-fs = 500;
-Td = [0.25, 0.75];
+% Setup Chirp parameter
+fs = 1000;
+Td = [0.7, 1.1];
 
-phi{1,1} = [0, 10, 60].'; 
-phi{1,2} = [0, 20, 85].';  
-rho{1,1} = 1;
-rho{1,2} = 1;
-snr = [12];
+phi{1,1} = [0, 10, 40, -70, 110].'; 
+phi{1,2} = [0, 50, 60, -90, 105].';  
+rho{1,1} = flipud([-1.79867186746021, 4.12672434196200, -3.29928369720428, 0.969161440768821].');
+rho{1,2} = flipud([-1.79867186746021, 4.12672434196200, -3.29928369720428, 0.969161440768821].');
 tol = 1e-8;
 
 % Visualization
 bDisplayPlots = false;
 
 % Tuning for LMC
-numParticles  = [50, 20];
-stepSizePhi{1,1} = 0.01  * [1, 1, 1, 1].'; % We do not care about phi0.
-stepSizePhi{1,2} = 0.001 * [1, 1, 1, 1].'; % We do not care about phi0.
+numParticles  = [50, 10];
+stepSizePhi{1,1} = 0.03      * [1, 1, 5, 5, 1, 1, 5, 5].'; % We do not care about phi0.
+stepSizePhi{1,2} = 0.0000001 * [1, 1, 2, 2, 1, 1, 2, 2].'; % We do not care about phi0.
 stepSizeConst = 0.1; 
 stepSizeMax   = 0.5;
 stepSizeMin   = 5e-6;
 stepNoiseVar  = [5e-6, 5e-6];
 avgConst      = [1, 1]; 
-tempConst     = [1, 1];
-numIterLmc    = [100, 100];   % This is T. Having more than one
+tempConst     = [1, 2];
+numIterLmc    = [500, 500];   % This is T. Having more than one
 noiseVarInit  = [1, 1];
 noiseVarMin   = 0.001;
-numIterSmooth = [10, 30];
-bGaussSmooth  = [true, true];
+numIterSmooth = [1, 70];
+bGaussSmooth  = [false, true];
 bEnableLangevin = true; 
 bMetropolisOn   = [true, true];
-bApplyWin       = [false, false];
-gamma           = [0.5, 0];
+bApplyWin       = [true, false];
+gamma           = [0.6, 0];
 initValMinMax   = [0, 100;
-                   0, 100];
+                   0, 100;
+                   -100, -50;
+                   100, 200];
 perturbVar = 0;
 
 % How many params?
 Nc = length(phi); % Number of chirps
-numParams = 0;
+numParams    = 0;
+numAmpParams = 0;
 for c = 1:Nc
-    numParams = numParams + numel(phi{1,c}(2:end));
+    numParams    = numParams    + numel(phi{1,c}(2:end));
+    numAmpParams = numAmpParams + numel(rho{1,c});
 end
 
 %% Statistics Tests
 
-numSnrRuns  = numel(snr);
-numStatRuns = 1;
-
-cellSnrRunStats = cell(1, numSnrRuns);
+cellSnrRunStats = cell(2, numSnrRuns);
 
 for snrRunInd = 1:numSnrRuns
     cellSnrRunStats{1, snrRunInd} = zeros(numParams, numStatRuns);
+    cellSnrRunStats{2, snrRunInd} = zeros(numAmpParams, numStatRuns);
 end
 
 %% Build setup & tuning structures
@@ -93,12 +98,14 @@ lmcTuning.initParams    = [];
 disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%');
 disp('Starting simulation ... ');
 fprintf('\n');
+% bStopSim = false;
+
 tic
 for snrRunInd = 1:numSnrRuns
     tic;
 
     disp('--------------------------------------------------------');
-    disp(['Stats Run Number ', num2str(snrRunInd), ' of ', num2str(numSnrRuns)]);
+    disp(['SNR Run Number ', num2str(snrRunInd), ' of ', num2str(numSnrRuns)]);
     disp('--------------------------------------------------------');
 
     % Choose snr for test
@@ -141,8 +148,12 @@ for snrRunInd = 1:numSnrRuns
             lmc = lmc.runLmcCore_SL();
         
             if lmc.bStopSim
+                bStopSim = true;
                 return;
+            else
+                bStopSim = false;
             end
+
             toc;
         
             % Init next run using params from previous run
@@ -151,31 +162,59 @@ for snrRunInd = 1:numSnrRuns
             noisyMat        = randn(numParams, numParticles(1,optRunInd));
             lmcTuning.initParams = repmat(bestParamsSoFar, 1, numParticles(1, optRunInd)) + perturbVar * noisyMat;
         
+            if bStopSim
+                return;
+            end
+
             if optRunInd ~= numOptRuns
                 delete(lmc)
             end
         end % opt run end
 
-        cellSnrRunStats{1, snrRunInd}(:, statRunInd) = lmc.sqrError; 
+        if bStopSim
+            return;
+        end
+
+        cellSnrRunStats{1, snrRunInd}(:, statRunInd) = lmc.cpe{1, lmc.bestParticleInd}.sqrPhiError; 
+        cellSnrRunStats{2, snrRunInd}(:, statRunInd) = lmc.cpe{1, lmc.bestParticleInd}.sqrRhoError; 
+
+        % Save data to MAT files
+        saveSimData.classData = lmc;
+        saveSimData.runStats  = cellSnrRunStats;      
+        saveFileFormat = '.mat';
+        saveFilePath   = 'Data/Output/ForPaper/MATFiles';
+        saveFileName   = [fullfile(saveFilePath,exptName), '_', num2str(snr(snrRunInd)), '_dB_StRun_', num2str(statRunInd), saveFileFormat];
+        save(saveFileName, "saveSimData", '-v7.3');
 
         if statRunInd ~= numStatRuns
             delete(lmc)
         end
 
         lmcTuning.initParams = [];
-    end % stat run end
-    
+
+    end % stat run end    
 end % snr run end
 toc;
 
 %% Calculate Variance of Error 
 
-VoE = zeros(numParams, numSnrRuns);
+VoE_phi = zeros(numParams,    numSnrRuns);
+VoE_rho = zeros(numAmpParams, numSnrRuns);
 for snrRunInd = 1:numSnrRuns
-    VoE(:, snrRunInd) = mean(cellSnrRunStats{1, snrRunInd}(:, snrRunInd), 2);
+    VoE_phi(:, snrRunInd) = mean(cellSnrRunStats{1, snrRunInd}, 2);
+    VoE_rho(:, snrRunInd) = mean(cellSnrRunStats{2, snrRunInd}, 2);
 
-    disp(['Variance of Error at ', num2str(snr(snrRunInd)), ' dB = ' , num2str(log10(VoE(:, snrRunInd).'))]);
+    disp(['Phase VoE (log10) at ', num2str(snr(snrRunInd)), ' dB SNR     = ' , num2str(log10(VoE_phi(:, snrRunInd).'))]);
+    disp(['Amplitude VoE (log10) at ', num2str(snr(snrRunInd)), ' dB SNR = ' , num2str(log10(VoE_rho(:, snrRunInd).'))]);
+    fprintf('\n');
 end
+
+saveVoeData.phase =  VoE_phi;
+saveVoeData.amplitude = VoE_rho;
+saveFileFormat = '.mat';
+saveFilePath   = 'Data/Output/ForPaper/MATFiles';
+saveFileName   = [fullfile(saveFilePath,exptName), '_VoE', saveFileFormat];
+save(saveFileName, "saveVoeData");
 
 %% Generate Plots
 

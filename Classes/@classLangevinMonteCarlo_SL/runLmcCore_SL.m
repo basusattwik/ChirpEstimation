@@ -195,7 +195,8 @@ function obj = runLmcCore_SL(obj)
         obj.cpe{1,obj.bestParticleInd} = obj.cpe{1,obj.bestParticleInd}.reconChirpSignals();
 
         % Evaluate errors in estimation
-        obj = evalErrors(obj);
+        obj.cpe{1,obj.bestParticleInd} = obj.cpe{1,obj.bestParticleInd}.evalParamErrors();
+
 
         % Housekeeping
         disp('Simulation complete!')
@@ -203,12 +204,15 @@ function obj = runLmcCore_SL(obj)
 
         fprintf('\n');
         disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-        disp(['The optimum chirp parameters are =  ', num2str(obj.optParam.')]);
+        disp(['The estimated phase parameters are     =  ', num2str(obj.optParam.')]);
+        disp(['The estimated amplitude parameters are =  ', num2str(obj.cpe{1,obj.bestParticleInd}.rhoEst')]);
+        fprintf('\n');
         disp(['Found by particle ', num2str(obj.bestParticleInd)]);
-        disp(['Log Error for params = ', num2str(log10(obj.sqrError.'))]);
+        fprintf('\n');
+        disp(['Log Error for phase params     = ', num2str(log10(obj.cpe{1,obj.bestParticleInd}.sqrPhiError.'))]);
+        disp(['Log Error for amplitude params = ', num2str(log10(obj.cpe{1,obj.bestParticleInd}.sqrRhoError.'))]);
         disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
         fprintf('\n');
-
 
     catch me
         delete(wbar); % Close wait bar when simulation errors out

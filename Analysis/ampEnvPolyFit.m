@@ -13,7 +13,7 @@ g  = 5;
 
 f = fx(t,b,g);
 
-c = polyfit(t, f, 3);
+c = polyfit(t, f, 2);
 p = polyval(c, t);
 
 figure('WindowStyle','docked')

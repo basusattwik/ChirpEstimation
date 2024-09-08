@@ -69,7 +69,7 @@ classdef classLangevinMonteCarlo_SL < handle
         saveHessTrc;
 
         % Error analysis
-        sqrError;
+        % sqrError;
         
     end
 
@@ -103,7 +103,7 @@ classdef classLangevinMonteCarlo_SL < handle
             obj.temper       = zeros(1, 1);
             obj.noiseVar     = zeros(1, obj.numParticles);
             obj.bestParticleInd  = [];
-            obj.sqrError = zeros(obj.numParams, 1);
+            % obj.sqrError = zeros(obj.numParams, 1);
             
             for pind = 1:obj.numParticles
                 obj.stepSizeInit(:,pind) = tuning.stepSize(1:obj.numParams);
@@ -171,7 +171,7 @@ classdef classLangevinMonteCarlo_SL < handle
         obj = runLmcCore_SL(obj);
         ax  = initLivePlots_SL(obj);
         []  = updateLivePlots_SL(obj, tind, ax);
-        obj = evalErrors(obj);
+        % obj = evalErrors(obj);
 
     end
 end

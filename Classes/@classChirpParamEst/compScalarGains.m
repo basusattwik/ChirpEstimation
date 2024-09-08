@@ -39,17 +39,25 @@ end
 obj.bvec  = ((H' * H + obj.gamma * obj.Idk) \ H') * ym; 
 
 % Get absolute vals (rho)
-obj.rhoEst = abs(obj.bvec);
+obj.rhoEst = obj.bvec; %abs(obj.bvec);
 
 % Get phase (phi_0)
-phi0 = angle(obj.bvec);
+% phi0 = angle(obj.bvec);
+
+% Compute scalar gains
+H_real  = [real(H) ; imag(H)];
+ym_real = [real(ym); imag(ym)];
+
+b_real = ((H_real' * H_real + obj.gamma * obj.Idk) \ H_real') * ym_real; 
+obj.rhoEst = b_real;
 
 startInd = 1;
 for c = 1:Nc
     endInd   = startInd + Ac(c) - 1;
     obj.rhoEstCell{1,c} = obj.rhoEst(startInd:endInd);
-    obj.phi0Est(1,c) = mean(phi0(startInd:endInd));
+    obj.phi0Est(1,c) = 0; %mean(phi0(startInd:endInd));
     startInd = startInd + Ac(c);
 end
+
 
 end
