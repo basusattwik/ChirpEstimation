@@ -7,51 +7,40 @@ fs = obj.fs;
 N  = obj.N;
 Nc = obj.Nc;
 Pc = obj.Pc;
+Ac = obj.Ac;
 ym = obj.ym;
+Ka = obj.Ka;
 
 % Preallocate for speed
-beta  = zeros(1, Nc); 
-gamma = zeros(1, Nc);
-phi   = cell(1, Nc);
-A     = zeros(N, 1);
-e     = zeros(N, 1);
-H     = zeros(N, Nc);
+phiCell = cell(1, Nc);
+H = zeros(N, Ka);
 
-% Avoiding divides
-oneOverFs = 1/fs;
+nvecOverFs = obj.n / fs;
+twoPij = 2*pi*1j;
 
 % Extract current params into data structs
+startInd = 1;
 for c = 1:Nc
-    beta(1,c)  = params(c,1);
-    gamma(1,c) = params(c + Nc,1);
-end
-startInd = 2*Nc + 1;
-for c = 1:Nc
-    phi{1,c} = params(startInd:startInd+Pc(c)-1);
-    startInd = startInd + Pc(c);
+    phiCell{1,c} = params(startInd:startInd+Pc(c)-2);
+    startInd = startInd + Pc(c) - 1;
 end
 
-% Compute basis matrix
+startInd = 1;
 for c = 1:Nc
-    P = size(phi{1,c},1);
-    pvec = (0:P-1).';
-    for n = 1:N % -- loop over number of samples
-        % Get the amplitude envelope
-        A(n,1) = exp(-beta(1,c) * (n-1) * oneOverFs) * (1 - exp(-gamma(1,c) * (n-1) * oneOverFs));
-    
-        % Get the exponential polynomial phase sinusoid
-        npvec  = ((n-1) * oneOverFs).^pvec; % vectors of powers of n/fs
-        e(n,1) = exp(2*pi*1j .* (phi{1,c}.' * npvec));
-    end
-    x = A .* e;
-    H(:,c) = x;
+    phi  = phiCell{1,c};
+    pvec = (1:Pc(c)-1);
+    avec = (0:Ac(c)-1);
+
+    endInd = startInd+Ac(c)-1;
+    H(:, startInd:endInd) = (nvecOverFs.^avec) .* exp(twoPij .* ((nvecOverFs.^pvec) * phi));
+    startInd = startInd + Ac(c);
 end
 
 % Get the projection matrix and the orthogonal projection matrix
-P  = H * (H' * H)^(-1) * H'; 
-Po = eye(size(P)) - P;
+P  = H * ((H' * H + obj.gamma * obj.Idk) \ H'); 
+Po = obj.Idn - P;
 
 % Objective function value
-J = real(ym' * Po * ym);
+J = real(ym' * (Po * ym));
 
 end
