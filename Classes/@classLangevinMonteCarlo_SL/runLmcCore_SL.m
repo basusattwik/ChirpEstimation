@@ -209,6 +209,7 @@ function obj = runLmcCore_SL(obj)
         fprintf('\n');
         disp(['Found by particle ', num2str(obj.bestParticleInd)]);
         fprintf('\n');
+        disp(['CRB for phase params           = ', num2str(log10(obj.cpe{1,obj.bestParticleInd}.crbnd.'))]);
         disp(['Log Error for phase params     = ', num2str(log10(obj.cpe{1,obj.bestParticleInd}.sqrPhiError.'))]);
         disp(['Log Error for amplitude params = ', num2str(log10(obj.cpe{1,obj.bestParticleInd}.sqrRhoError.'))]);
         disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')

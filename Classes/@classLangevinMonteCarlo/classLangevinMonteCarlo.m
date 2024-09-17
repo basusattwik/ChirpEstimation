@@ -19,12 +19,14 @@ classdef classLangevinMonteCarlo < handle
         numIterSmooth;
         noiseVarInit;
         noiseVarFinal;
+        initValMinMax;
 
         % Parameters 
         optParam;
         numParams;
         noiseVar; 
         noiseVarRatio;
+        bestParticleInd;
 
         % States
         temper;
@@ -41,6 +43,7 @@ classdef classLangevinMonteCarlo < handle
         bStopLmc;
         bEnableGaussSmooth;
         bEnableLangevin;
+        bStopSim;
 
         % External
         cpe; % classChirpParamEst
@@ -78,11 +81,14 @@ classdef classLangevinMonteCarlo < handle
             obj.numIterSmooth = tuning.numIterSmooth;
             obj.bEnableGaussSmooth  = tuning.bGaussSmooth;
             obj.bEnableLangevin = tuning.bEnableLangevin;
+            obj.initValMinMax = tuning.initValMinMax;
 
+            % Init tuning param arrays
             obj.stepSizeInit = zeros(obj.numParams, obj.numParticles);
             obj.stepSize     = zeros(obj.numParams, obj.numParticles);
             obj.stepSizeMax  = zeros(obj.numParams, obj.numParticles);
             obj.temper       = zeros(1, 1);
+            obj.bestParticleInd  = [];
 
             for pind = 1:obj.numParticles
                 obj.stepSizeInit(:,pind) = tuning.stepSize(1:obj.numParams);
@@ -102,7 +108,20 @@ classdef classLangevinMonteCarlo < handle
             obj.numIterLmcAndNoise = obj.numIterLmc * obj.numIterNoise;
 
             % Init state params and gradients
-            obj.param       = unifrnd(-100, 100, obj.numParams, obj.numParticles);%
+            if ~isempty(tuning.initParams)
+                obj.param = tuning.initParams;
+            else
+
+                if setup.Nc == 1
+                    obj.param = unifrnd(obj.initValMinMax(1), obj.initValMinMax(2), obj.numParams, obj.numParticles); %[30, 57, 59.3];
+                else
+                    for prind = 1:obj.numParams/2
+                        obj.param(prind,:)   = unifrnd(obj.initValMinMax(prind, 1), obj.initValMinMax(prind, 2), 1, obj.numParticles);
+                        obj.param(prind+obj.numParams/2,:) = unifrnd(obj.initValMinMax(prind, 1), obj.initValMinMax(prind, 2), 1, obj.numParticles);
+                    end
+                end
+            end
+
             obj.grads       = zeros(obj.numParams, obj.numParticles); 
             obj.avgGrads    = zeros(obj.numParams, obj.numParticles);
             obj.avgGradNorm = zeros(1, obj.numParticles);

@@ -134,6 +134,7 @@ try
                 % Update waitbar and message
                 if getappdata(wbar, 'canceling')
                     disp('Simulation cancelled!')
+                    obj.bStopSim = true;
                     delete(wbar);
                     return
                 end    
@@ -191,16 +192,33 @@ try
         objFuncVals(pind, 1) = obj.cpe{1,pind}.evalObjectiveFunc(obj.param(:,pind));
     end
 
-    [~, minObjFuncInd] = min(objFuncVals);
-    obj.optParam = obj.param(:, minObjFuncInd);
-    disp(['The optimum chirp parameters = ', num2str(obj.optParam.')]);
-    disp(['Found by particle ', num2str(minObjFuncInd)]);
+    [~, obj.bestParticleInd] = min(objFuncVals);
+    obj.optParam = obj.param(:, obj.bestParticleInd);
 
     % Finally, compute the scalar gains for CPE
-    obj.cpe{1,minObjFuncInd} = obj.cpe{1,minObjFuncInd}.compScalarGains(obj.optParam);   
+    obj.cpe{1,obj.bestParticleInd} = obj.cpe{1,obj.bestParticleInd}.compScalarGains(obj.optParam);   
 
-    % Store best particle index
-    % Compute b vector (amp and phase too)
+    % Reconstruct the chirp from the estimated parameters
+    obj.cpe{1,obj.bestParticleInd} = obj.cpe{1,obj.bestParticleInd}.reconChirpSignals();
+
+    % Evaluate errors in estimation
+    obj.cpe{1,obj.bestParticleInd} = obj.cpe{1,obj.bestParticleInd}.evalParamErrors();
+
+    % Housekeeping
+    disp('Simulation complete!')
+    delete(wbar);
+
+    fprintf('\n');
+    disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+    disp(['The estimated phase parameters are     =  ', num2str(obj.optParam.')]);
+    disp(['The estimated amplitude parameters are =  ', num2str(obj.cpe{1,obj.bestParticleInd}.rhoEst')]);
+    fprintf('\n');
+    disp(['Found by particle ', num2str(obj.bestParticleInd)]);
+    fprintf('\n');
+    disp(['Log Error for phase params     = ', num2str(log10(obj.cpe{1,obj.bestParticleInd}.sqrPhiError.'))]);
+    disp(['Log Error for amplitude params = ', num2str(log10(obj.cpe{1,obj.bestParticleInd}.sqrRhoError.'))]);
+    disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+    fprintf('\n');
 
     % Housekeeping
     disp('Simulation complete!')

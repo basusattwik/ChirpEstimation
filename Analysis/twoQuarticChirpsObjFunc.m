@@ -3,33 +3,29 @@ clc
 % close all
 clearvars
 
-% phi{1,1} = [0, 20, 60, 20, 15].'; 
-% phi{1,2} = [0, 50, 55, 45, 20].';  
-% 
-
-% phi{1,1} = [0, 10, 40, -70, 110].'; 
-% phi{1,2} = [0, 50, 60, -90, 105].';  
+phi{1,1} = [0, 10, 40, -70, 110].'; 
+phi{1,2} = [0, 50, 60, -90, 105].';  
 % Parameters
-b = 1;
+b = 1.3;
 A1_true  = 1.0;
-f01_true = 10;
-k1_true  = 40.0;
-c1_true  = -70;
+f01_true = 30;
+k1_true  = 70.0;
+c1_true  = 0;%-70;
 d1_true  = 0;
 
 A2_true  = 1;
-f02_true = 50;
-k2_true  = 60;
-c2_true  = -90;
+f02_true = 45;
+k2_true  = 85;
+c2_true  = 0;%-90;
 d2_true  = 0;
 
 Ngs = 100;
-N   = 200;
+N   = 250;
 fs  = 1000;
-T   = 0.8;  % Extended time duration
+T   = 1;  % Extended time duration
 t   = 0:1/fs:T-1/fs; %linspace(0, T, 1000);  % Time vector
 
-lim = 5;
+lim = 6;
 
 % SNR increase factor
 SNR_increase_factor = 1;
@@ -46,20 +42,20 @@ f01_range = linspace(f01_true - lim , f01_true + lim , N);
 f02_range = linspace(f02_true - lim , f02_true + lim , N);
 k1_range  = linspace(k1_true - lim , k1_true + lim , N);
 k2_range  = linspace(k2_true - lim , k2_true + lim , N);
-c1_range  = linspace(c1_true - lim , c1_true + lim , N);
-c2_range  = linspace(c2_true - lim , c2_true + lim , N);
-d1_range  = linspace(d1_true - lim , d1_true + lim , N);
-d2_range  = linspace(d2_true - lim , d2_true + lim , N);
+% c1_range  = linspace(c1_true - lim , c1_true + lim , N);
+% c2_range  = linspace(c2_true - lim , c2_true + lim , N);
+% d1_range  = linspace(d1_true - lim , d1_true + lim , N);
+% d2_range  = linspace(d2_true - lim , d2_true + lim , N);
 
 % Preallocate MSE matrices
 mse_f = zeros(length(f01_range), length(f02_range));
 mse_k = zeros(length(k1_range), length(k2_range));
-mse_c = zeros(length(c1_range), length(c2_range));
-mse_d = zeros(length(d1_range), length(d2_range));
+% mse_c = zeros(length(c1_range), length(c2_range));
+% mse_d = zeros(length(d1_range), length(d2_range));
 mse_f_gs = zeros(length(f01_range), length(f02_range));
 mse_k_gs = zeros(length(k1_range), length(k2_range));
-mse_c_gs = zeros(length(c1_range), length(c2_range));
-mse_d_gs = zeros(length(d1_range), length(d2_range));
+% mse_c_gs = zeros(length(c1_range), length(c2_range));
+% mse_d_gs = zeros(length(d1_range), length(d2_range));
 
 % Compute MSE for varying f01 and f02
 temp = 0;
@@ -101,43 +97,43 @@ for i = 1:length(k1_range)
     end
 end
 
-% Compute MSE for varying c1 and c2
-for i = 1:length(c1_range)
-    for j = 1:length(c2_range)
-        s_model = SNR_increase_factor * (...
-            A1_true * exp(1i * 2 * pi * (f01_true * t + k1_true * t.^2 + c1_range(i) * t.^3 + d1_true * t.^4)) + ...
-            A2_true * exp(1i * 2 * pi * (f02_true * t + k2_true * t.^2 + c2_range(j) * t.^3 + d2_true * t.^4)));
-        mse_c(i, j) = sum(abs(s_measured_no_damping - s_model).^2);
-
-        % for n = 1:Ngs
-        %     s_model_gs = SNR_increase_factor * (...
-        %         A1_true * exp(1i * 2 * pi * (f01_true * t + k1_true * t.^2 + (c1_range(i) + sig_gs*randn(1,1)) * t.^3 + d1_true * t.^4)) + ...
-        %         A2_true * exp(1i * 2 * pi * (f02_true * t + k2_true * t.^2 + (c2_range(j) + sig_gs*randn(1,1)) * t.^3 + d2_true * t.^4)));
-        %     temp = temp + mean(abs(s_measured_no_damping - s_model_gs).^2);
-        % end
-        % mse_c_gs(i, j) = temp/Ngs;
-        % temp = 0;
-    end
-end
-
-% Compute MSE for varying c1 and c2
-for i = 1:length(d1_range)
-    for j = 1:length(d2_range)
-        s_model = SNR_increase_factor * (...
-            A1_true * exp(1i * 2 * pi * (f01_true * t + k1_true * t.^2 + c1_true * t.^3 + d1_range(i) * t.^4)) + ...
-            A2_true * exp(1i * 2 * pi * (f02_true * t + k2_true * t.^2 + c2_true * t.^3 + d2_range(j) * t.^4)));
-        mse_d(i, j) = sum(abs(s_measured_no_damping - s_model).^2);
-
-        % for n = 1:Ngs
-        %     s_model_gs = SNR_increase_factor * (...
-        %         A1_true * exp(1i * 2 * pi * (f01_true * t + k1_true * t.^2 + c1_true * t.^3 + (d1__range(i) + sig_gs*randn(1,1) * t.^4)) + ...
-        %         A2_true * exp(1i * 2 * pi * (f02_true * t + k2_true * t.^2 + c2_true + sig_gs*randn(1,1)) * t.^3 + (d2__range(j) + sig_gs*randn(1,1)) * t.^4)));
-        %     temp = temp + mean(abs(s_measured_no_damping - s_model_gs).^2); 
-        % end
-        % mse_c_gs(i, j) = temp/Ngs;
-        % temp = 0;
-    end
-end
+% % Compute MSE for varying c1 and c2
+% for i = 1:length(c1_range)
+%     for j = 1:length(c2_range)
+%         s_model = SNR_increase_factor * (...
+%             A1_true * exp(1i * 2 * pi * (f01_true * t + k1_true * t.^2 + c1_range(i) * t.^3 + d1_true * t.^4)) + ...
+%             A2_true * exp(1i * 2 * pi * (f02_true * t + k2_true * t.^2 + c2_range(j) * t.^3 + d2_true * t.^4)));
+%         mse_c(i, j) = sum(abs(s_measured_no_damping - s_model).^2);
+% 
+%         % for n = 1:Ngs
+%         %     s_model_gs = SNR_increase_factor * (...
+%         %         A1_true * exp(1i * 2 * pi * (f01_true * t + k1_true * t.^2 + (c1_range(i) + sig_gs*randn(1,1)) * t.^3 + d1_true * t.^4)) + ...
+%         %         A2_true * exp(1i * 2 * pi * (f02_true * t + k2_true * t.^2 + (c2_range(j) + sig_gs*randn(1,1)) * t.^3 + d2_true * t.^4)));
+%         %     temp = temp + mean(abs(s_measured_no_damping - s_model_gs).^2);
+%         % end
+%         % mse_c_gs(i, j) = temp/Ngs;
+%         % temp = 0;
+%     end
+% end
+% 
+% % Compute MSE for varying c1 and c2
+% for i = 1:length(d1_range)
+%     for j = 1:length(d2_range)
+%         s_model = SNR_increase_factor * (...
+%             A1_true * exp(1i * 2 * pi * (f01_true * t + k1_true * t.^2 + c1_true * t.^3 + d1_range(i) * t.^4)) + ...
+%             A2_true * exp(1i * 2 * pi * (f02_true * t + k2_true * t.^2 + c2_true * t.^3 + d2_range(j) * t.^4)));
+%         mse_d(i, j) = sum(abs(s_measured_no_damping - s_model).^2);
+% 
+%         % for n = 1:Ngs
+%         %     s_model_gs = SNR_increase_factor * (...
+%         %         A1_true * exp(1i * 2 * pi * (f01_true * t + k1_true * t.^2 + c1_true * t.^3 + (d1__range(i) + sig_gs*randn(1,1) * t.^4)) + ...
+%         %         A2_true * exp(1i * 2 * pi * (f02_true * t + k2_true * t.^2 + c2_true + sig_gs*randn(1,1)) * t.^3 + (d2__range(j) + sig_gs*randn(1,1)) * t.^4)));
+%         %     temp = temp + mean(abs(s_measured_no_damping - s_model_gs).^2); 
+%         % end
+%         % mse_c_gs(i, j) = temp/Ngs;
+%         % temp = 0;
+%     end
+% end
 
 %% Save data
 
@@ -193,42 +189,44 @@ end
 % 3D Plot MSE for f01 and f02
 fname = 'myFig';
 hfig = figure;%('windowstyle','docked');
-% tiledlayout flow
+tiledlayout(1,1)
 
-subplot(1,3,1);%nexttile
-surf(f01_range, f02_range, mse_f', 'EdgeColor', 'none');
-hold on;
-contour(f01_range, f02_range, mse_f', 10);
-scatter3(f01_true, f02_true, min(mse_f(:)), 100, 'r', 'filled');
-xlabel('$\varphi_{11}$', 'Interpreter','latex');
-ylabel('$\varphi_{21}$', 'Interpreter','latex');
-zlabel('J');
+% nexttile
+% surf(f01_range, f02_range, mse_f', 'EdgeColor', 'none');
+% hold on;
+% contour(f01_range, f02_range, mse_f', 10);
+% scatter3(f01_true, f02_true, min(mse_f(:)), 100, 'r', 'filled');
+% xlabel('$\varphi_{11}$', 'Interpreter','latex');
+% ylabel('$\varphi_{21}$', 'Interpreter','latex');
+zlabel('$J$', 'Interpreter','latex');
+% zlim([min(mse_f(:))-5, max(mse_f(:)) + 5]);
 % title('Ob Varying f_{01} and f_{02}');
 
 % 3D Plot MSE for k1 and k2
-subplot(1,3,2);%nexttile
+nexttile
 surf(k1_range, k2_range, mse_k', 'EdgeColor', 'none');
 hold on;
 contour(k1_range, k2_range, mse_k', 10);
 scatter3(k1_true, k2_true, min(mse_k(:)), 100, 'r', 'filled');
 xlabel('$\varphi_{12}$', 'Interpreter','latex');
 ylabel('$\varphi_{22}$', 'Interpreter','latex');
-zlabel('J');
+zlabel('$J$', 'Interpreter','latex');
+% zlim([min(mse_k(:))-5, max(mse_k(:)) + 5]);
 % title('3D MSE for Varying k_1 and k_2 (No Damping)');
 
-% 3D Plot MSE for c1 and c2
-subplot(1,3,3); %nexttile
-surf(c1_range, c2_range, mse_c', 'EdgeColor', 'none');
-hold on;
-contour(c1_range, c2_range, mse_c', 10);
-scatter3(c1_true, c2_true, min(mse_c(:)), 100, 'r', 'filled');
-% colorbar
-xlabel('$\varphi_{13}$', 'Interpreter','latex');
-ylabel('$\varphi_{23}$', 'Interpreter','latex');
-zlabel('J');
-% title('3D MSE for Varying c_1 and c_2 (No Damping)');
+% % 3D Plot MSE for c1 and c2
+% subplot(1,3,3); %nexttile
+% surf(c1_range, c2_range, mse_c', 'EdgeColor', 'none');
+% hold on;
+% contour(c1_range, c2_range, mse_c', 10);
+% scatter3(c1_true, c2_true, min(mse_c(:)), 100, 'r', 'filled');
+% % colorbar
+% xlabel('$\varphi_{13}$', 'Interpreter','latex');
+% ylabel('$\varphi_{23}$', 'Interpreter','latex');
+% zlabel('J');
+% % title('3D MSE for Varying c_1 and c_2 (No Damping)');
 
-set(findall(hfig,'-property','FontSize'),'FontSize',20)
+set(findall(hfig,'-property','FontSize'),'FontSize',20,'FontName', 'Times')
 
 % 3D Plot MSE for d1 and d2
 % nexttile
@@ -294,8 +292,8 @@ set(findall(hfig,'-property','FontSize'),'FontSize',20)
 function [] = makeNiceFigure(hfig, fname)
 
 picturewidth = 20; % set this parameter and keep it forever
-hw_ratio = 0.4; % feel free to play with this ratio
-set(findall(hfig,'-property','FontSize'),'FontSize',20) % adjust fontsize to your document
+hw_ratio = 0.2; % feel free to play with this ratio
+set(findall(hfig,'-property','FontSize'),'FontSize', 20, 'FontName', 'Times') % adjust fontsize to your document
 
 set(findall(hfig,'-property','Box'),'Box','off') % optional
 set(findall(hfig,'-property','Interpreter'),'Interpreter','latex') 

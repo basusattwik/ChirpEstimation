@@ -26,7 +26,7 @@ classdef classChirpParamEst < handle
         % Signals for iteration steps
         a;        % Chirp amplitude envelope (N x Nc)
         e;        % Chirps without amplitude envelope (N x Ka)
-        u;        % Chirps with amplitude envelepe (N x Nc)
+        u;        % Chirps with amplitude envelope (N x Nc)
         x;        % Clean chirp (N x 1)
         xg;       % Basis for gamma (Nx1)
         w;        % White Gaussian noise at specified snr (N x 1)
@@ -83,6 +83,9 @@ classdef classChirpParamEst < handle
         % Errors
         sqrPhiError;
         sqrRhoError;
+        crbnd;      % Cramer-Rao Bound
+        fimat;      % Fisher Information Matrix
+        sigma2;      % Noise var
         
     end
 
@@ -124,6 +127,7 @@ classdef classChirpParamEst < handle
             % Init chirp signals based on the settings file
             obj = obj.resetArrays();
             obj = obj.initChirpSignals();
+            obj = compCramerRaoBounds(obj);
         end
 
         % Function declarations are provided below. Definitions are in
@@ -138,18 +142,11 @@ classdef classChirpParamEst < handle
         % Computational steps
         obj = compObjectiveFunc(obj);
         obj = evalObjectiveFunc(obj, params);
-        % obj = compBasisSignals(obj);
-        % obj = compBasisMatrix(obj);
-        % obj = compProjMatrix(obj);
-        % obj = compAllGradients(obj);
         obj = compScalarGains(obj, params);
         obj = reconChirpSignals(obj)
 
         % The process function
         obj = runCpeCore(obj, params);
-
-        % Helper functions
-        obj = convertGradJArray2Cell(obj);
 
         % Error Analysis
         obj = evalParamErrors(obj);

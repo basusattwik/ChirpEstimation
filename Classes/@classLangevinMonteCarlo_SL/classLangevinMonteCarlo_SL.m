@@ -121,7 +121,6 @@ classdef classLangevinMonteCarlo_SL < handle
             if ~isempty(tuning.initParams)
                 obj.param = tuning.initParams;
             else
-
                 if setup.Nc == 1
                     obj.param = unifrnd(obj.initValMinMax(1), obj.initValMinMax(2), obj.numParams, obj.numParticles); %[30, 57, 59.3];
                 else
@@ -171,6 +170,7 @@ classdef classLangevinMonteCarlo_SL < handle
         obj = runLmcCore_SL(obj);
         ax  = initLivePlots_SL(obj);
         []  = updateLivePlots_SL(obj, tind, ax);
+
         % obj = evalErrors(obj);
 
     end

@@ -7,50 +7,50 @@ clc
 % Vanilla Langevin Monte Carlo
 
 %% 
-exptName = 'GS_LMC_Test';
-snr = [3, 6, 9];
+exptName = 'CG_LMC_Test_solo';
+snr = [100];%, 6, 9, 12, 0];
 
 % Runs #
 numSnrRuns  = numel(snr);
-numStatRuns = 5;
-numOptRuns  = 2;
+numStatRuns = 1;
+numOptRuns  = 1;
 
 % Setup Chirp parameter
-fs = 1000;
-Td = [0.7, 1.1];
+fs = 500;
+Td = [0.2, 1.1];
 
-phi{1,1} = [0, 10, 40, -70, 110].'; 
-phi{1,2} = [0, 50, 60, -90, 105].';  
-rho{1,1} = flipud([-1.79867186746021, 4.12672434196200, -3.29928369720428, 0.969161440768821].');
-rho{1,2} = flipud([-1.79867186746021, 4.12672434196200, -3.29928369720428, 0.969161440768821].');
+phi{1,1} = [0, 10, 40].';%, -70, 110].'; 
+phi{1,2} = [0, 50, 60].';%, -90, 105].';  
+rho{1,1} = 1;%flipud([-1.79867186746021, 4.12672434196200, -3.29928369720428, 0.969161440768821].');
+rho{1,2} = 1;%flipud([-1.79867186746021, 4.12672434196200, -3.29928369720428, 0.969161440768821].');
 tol = 1e-8;
 
 % Visualization
-bDisplayPlots = false;
+bDisplayPlots = true;
 
 % Tuning for LMC
 numParticles  = [50, 10];
-stepSizePhi{1,1} = 0.03      * [1, 1, 5, 5, 1, 1, 5, 5].'; % We do not care about phi0.
-stepSizePhi{1,2} = 0.0000001 * [1, 1, 2, 2, 1, 1, 2, 2].'; % We do not care about phi0.
+stepSizePhi{1,1} = 0.000001 * [1, 1, 5, 5, 1, 1, 5, 5].'; % We do not care about phi0.
+stepSizePhi{1,2} = 0.000001 * [1, 1, 5, 5, 1, 1, 5, 5].'; % We do not care about phi0.
 stepSizeConst = 0.1; 
 stepSizeMax   = 0.5;
 stepSizeMin   = 5e-6;
 stepNoiseVar  = [5e-6, 5e-6];
 avgConst      = [1, 1]; 
-tempConst     = [1, 2];
-numIterLmc    = [500, 500];   % This is T. Having more than one
+tempConst     = [2, 4];
+numIterLmc    = [100, 100];   % This is T. Having more than one
 noiseVarInit  = [1, 1];
 noiseVarMin   = 0.001;
-numIterSmooth = [1, 70];
-bGaussSmooth  = [false, true];
+numIterSmooth = [20, 50];
+bGaussSmooth  = [true, true];
 bEnableLangevin = true; 
-bMetropolisOn   = [true, true];
-bApplyWin       = [true, false];
-gamma           = [0.6, 0];
-initValMinMax   = [0, 100;
-                   0, 100;
-                   -100, -50;
-                   100, 200];
+bMetropolisOn = [true, true];
+bApplyWin     = [false, false];
+gamma         = [0, 0];
+initValMinMax = [0, 100;
+                 0, 100;
+                 -100, -50;
+                 50, 150];
 perturbVar = 0;
 
 % How many params?
@@ -100,9 +100,8 @@ disp('Starting simulation ... ');
 fprintf('\n');
 % bStopSim = false;
 
-tic
+tic;
 for snrRunInd = 1:numSnrRuns
-    tic;
 
     disp('--------------------------------------------------------');
     disp(['SNR Run Number ', num2str(snrRunInd), ' of ', num2str(numSnrRuns)]);
@@ -144,7 +143,6 @@ for snrRunInd = 1:numSnrRuns
             lmc = classLangevinMonteCarlo_SL(lmcTuning, cpeSetting);
         
             % Start the simulation
-            tic;
             lmc = lmc.runLmcCore_SL();
         
             if lmc.bStopSim
@@ -153,8 +151,6 @@ for snrRunInd = 1:numSnrRuns
             else
                 bStopSim = false;
             end
-
-            toc;
         
             % Init next run using params from previous run
             bestParticleInd = lmc.bestParticleInd ;
@@ -165,16 +161,17 @@ for snrRunInd = 1:numSnrRuns
             if bStopSim
                 return;
             end
-
             if optRunInd ~= numOptRuns
                 delete(lmc)
             end
-        end % opt run end
+
+        end % opt run END
 
         if bStopSim
             return;
         end
 
+        % Save errors
         cellSnrRunStats{1, snrRunInd}(:, statRunInd) = lmc.cpe{1, lmc.bestParticleInd}.sqrPhiError; 
         cellSnrRunStats{2, snrRunInd}(:, statRunInd) = lmc.cpe{1, lmc.bestParticleInd}.sqrRhoError; 
 
@@ -189,11 +186,11 @@ for snrRunInd = 1:numSnrRuns
         if statRunInd ~= numStatRuns
             delete(lmc)
         end
-
         lmcTuning.initParams = [];
 
-    end % stat run end    
-end % snr run end
+    end % stat run END    
+
+end % snr run END
 toc;
 
 %% Calculate Variance of Error 
@@ -209,7 +206,7 @@ for snrRunInd = 1:numSnrRuns
     fprintf('\n');
 end
 
-saveVoeData.phase =  VoE_phi;
+saveVoeData.phase     = VoE_phi;
 saveVoeData.amplitude = VoE_rho;
 saveFileFormat = '.mat';
 saveFilePath   = 'Data/Output/ForPaper/MATFiles';

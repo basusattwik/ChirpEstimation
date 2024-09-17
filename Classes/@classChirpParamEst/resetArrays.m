@@ -39,5 +39,8 @@ obj.d2J_phi = zeros(obj.Kp - obj.Nc, obj.Kp - obj.Nc);
 obj.Idn     = eye(obj.N, obj.N);
 obj.Idk     = eye(obj.Ka, obj.Ka);
 
+obj.fimat = zeros(obj.Kp - obj.Nc, obj.Kp - obj.Nc);
+obj.crbnd = zeros(1, obj.Kp - obj.Nc);
+
 
 end

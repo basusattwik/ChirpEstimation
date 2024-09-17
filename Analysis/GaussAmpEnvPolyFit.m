@@ -1,7 +1,7 @@
 
 clc
-close all
-clearvars
+% close all
+% clearvars
 
 % Parameters
 sample_rate = 3000;   % Sampling rate in Hz
